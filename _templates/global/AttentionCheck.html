@@ -1,0 +1,12 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-attention-check survey-attention-blue">
+    <p class="survey-attention-check__question">{{ attention_question }}</p>
+    <p class="survey-attention-check__instruction"><strong>{{ attention_instruction }}</strong></p>
+</div>
+
+{% formfield attention_field label="" %}
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

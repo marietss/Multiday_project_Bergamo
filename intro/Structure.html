@@ -1,0 +1,34 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<p>Lo studio è composto da <strong>due fasi</strong>. La prima fase si svolge ora, mentre la seconda fase consiste in <strong>una decisione al giorno per 5 giorni consecutivi</strong>, a partire da lunedì prossimo.</p>
+<ul>
+    <li><strong>Fase 1:</strong> ti verranno chieste alcune domande su di te e dovrai prendere alcune decisioni.</li>
+    <li><strong>Fase 2:</strong> a partire da lunedì prossimo, per 5 giorni consecutivi, riceverai una mail per completare
+      un breve task con una decisione.</li>
+</ul>
+
+<p><strong>Tempo di completamento:</strong><br>
+    La Fase 1 richiederà circa <strong>5 minuti</strong>.<br>
+    La Fase 2 richiederà solo <strong>pochi minuti</strong> ogni giorno.
+</p>
+
+<p><strong>Punti bonus:</strong><br>
+    In aggiunta al compenso che ricevi se completi la Fase 1, puoi ricevere punti aggiuntivi.
+<br>Questi punti aggiuntivi dipendono dalle decisioni che prenderai in Fase 2 e da quante ne completerai.
+</p>
+<p>Il tuo compenso viene espresso attraverso un sistema a punti in cui:</p>
+<p style="text-align: center;"> <strong>[TASSO DI CAMBIO DA IMPOSTARE]</strong></p>
+
+<section class="survey-attention-warning" aria-labelledby="attention-warning-title">
+    <h3 id="attention-warning-title">Importante</h3>
+    <div class="survey-attention-blue">
+        <p>Durante questo questionario compariranno due domande scritte in azzurro brillante, come questo testo.</p>
+        <p>Quando compariranno, ti chiediamo di ignorare la domanda riportata nella prima riga e di rispondere seguendo invece l’istruzione in grassetto, selezionando il nome di un animale.</p>
+        <p>Se risponderai in modo errato a entrambe le domande, non potrai completare lo studio e non otterrai alcun compenso.</p>
+        <p>Queste domande servono come controllo della qualità delle risposte e per individuare compilazioni automatizzate.</p>
+    </div>
+</section>
+
+<div class="survey-actions survey-actions--information">{% next_button %}</div>
+{% endblock %}

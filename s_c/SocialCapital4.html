@@ -1,0 +1,22 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-introduction survey-scale-instruction">
+    <p>Per ciascuna delle seguenti situazioni, indica quanto saresti disposto/a ad agire nel modo descritto, su una scala da 0 a 10, dove 0 significa “Per niente disposto/a” e 10 “Completamente disposto/a”.</p>
+</div>
+
+<div class="survey-question">
+    <p class="survey-question__text">Quanto sei disposto a punire qualcuno che ti tratta in modo scorretto, anche se potrebbe costarti?</p>
+    {% include "global/SliderField.html" with field=form.punish_personal_unfairness & field_name="punish_personal_unfairness" & min_value=0 & max_value=10 & left_label="0 – Per niente disposto/a" & right_label="10 – Completamente disposto/a" & accessible_label="Disponibilità a punire chi ti tratta in modo scorretto" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Quanto sei disposto a punire qualcuno che tratta ingiustamente gli altri, anche se potrebbe costarti?</p>
+    {% include "global/SliderField.html" with field=form.punish_unfairness_to_others & field_name="punish_unfairness_to_others" & min_value=0 & max_value=10 & left_label="0 – Per niente disposto/a" & right_label="10 – Completamente disposto/a" & accessible_label="Disponibilità a punire chi tratta ingiustamente gli altri" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Quanto sei disposto a donare per una giusta causa senza aspettarti nulla in cambio?</p>
+    {% include "global/SliderField.html" with field=form.unconditional_charitable_giving & field_name="unconditional_charitable_giving" & min_value=0 & max_value=10 & left_label="0 – Per niente disposto/a" & right_label="10 – Completamente disposto/a" & accessible_label="Disponibilità a donare senza aspettarsi nulla in cambio" %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

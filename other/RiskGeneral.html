@@ -1,0 +1,10 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-question">
+    <p class="survey-question__text">In generale, quanto sei disposto/a a correre dei rischi?</p>
+    <p>Rispondi su una scala da 0 a 10, dove 0 significa “per niente disposto/a a correre rischi” e 10 significa “completamente disposto/a a correre rischi”.</p>
+    {% include "global/SliderField.html" with field=form.general_risk_willingness & field_name="general_risk_willingness" & min_value=0 & max_value=10 & left_label="0 – Per niente disposto/a a correre rischi" & right_label="10 – Completamente disposto/a a correre rischi" & accessible_label="Disponibilità generale a correre rischi" %}
+</div>
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

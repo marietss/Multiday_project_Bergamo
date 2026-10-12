@@ -1,0 +1,35 @@
+{% extends "otree/Page.html" %}
+{% load otree static %}
+
+{% block title %}{% if is_defined('page_title') %}{{ page_title }}{% endif %}{% endblock %}
+
+{% block global_styles %}
+    <link rel="stylesheet" href="{% static 'global/survey.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="survey-shell{% if is_defined('survey_progress_percent') %} survey-shell--questionnaire{% endif %}">
+    {% if is_defined('survey_progress_percent') %}
+        <div class="survey-progress" aria-label="Avanzamento del questionario">
+            <div class="survey-progress__track"
+                 role="progressbar"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-valuenow="{{ survey_progress_percent }}">
+                <div class="survey-progress__fill" style="width: {{ survey_progress_percent }}%"></div>
+            </div>
+            <span class="survey-progress__text">{{ survey_progress_step }} di {{ survey_progress_total }}</span>
+        </div>
+    {% endif %}
+
+    {% if is_defined('page_subtitle') %}
+        <p class="survey-subtitle">{{ page_subtitle }}</p>
+    {% endif %}
+
+    {% block survey_content %}{% endblock %}
+</main>
+{% endblock %}
+
+{% block global_scripts %}
+    <script src="{% static 'global/survey.js' %}"></script>
+{% endblock %}

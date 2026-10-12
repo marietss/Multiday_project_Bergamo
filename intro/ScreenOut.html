@@ -1,0 +1,43 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="card">
+    <p>Grazie per l’interesse mostrato. Verrai reindirizzato/a fra pochi secondi.</p>
+    <p>Se il redirect non parte, <a id="manual-link" href="{{ redirect_url }}" target="_blank" rel="noopener">clicca qui</a>.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        function setupRedirect() {
+            const redirectUrl = "{{ redirect_url }}";
+            const redirectDelay = Number('{{ redirect_delay_ms }}') || 1500;
+            const manualLink = document.getElementById('manual-link');
+            let alreadyRedirecting = false;
+
+            function goToExternalSite() {
+                if (alreadyRedirecting || !redirectUrl) return;
+                alreadyRedirecting = true;
+                window.location.href = redirectUrl;
+            }
+
+            if (manualLink) {
+                manualLink.addEventListener('click', () => {
+                    alreadyRedirecting = true;
+                });
+            }
+
+            if (redirectUrl) {
+                setTimeout(goToExternalSite, redirectDelay);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupRedirect);
+        } else {
+            setupRedirect();
+        }
+    })();
+</script>
+{% endblock %}

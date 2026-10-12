@@ -1,0 +1,30 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-introduction">
+    Per ciascuno dei seguenti comportamenti, indica in che misura ritieni che possa essere giustificato, utilizzando una scala da 1 a 10, dove 1 significa “Mai giustificato” e 10 significa “Sempre giustificato”.
+</div>
+
+<div class="survey-question">
+    <p class="survey-question__text">Cercare di ottenere dallo Stato benefici a cui non si ha diritto (pensioni di invalidità, assegni familiari, ecc.).</p>
+    {% include "global/SliderField.html" with field=form.justify_false_benefits & field_name="justify_false_benefits" & min_value=1 & max_value=10 & left_label="1 – Mai giustificato" & right_label="10 – Sempre giustificato" & accessible_label="Giustificabilità dell'ottenere benefici non dovuti" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Non pagare il biglietto sui mezzi di trasporto.</p>
+    {% include "global/SliderField.html" with field=form.justify_fare_evasion & field_name="justify_fare_evasion" & min_value=1 & max_value=10 & left_label="1 – Mai giustificato" & right_label="10 – Sempre giustificato" & accessible_label="Giustificabilità del non pagare il biglietto" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Non pagare le tasse (o pagarle meno del dovuto) se si ha la possibilità.</p>
+    {% include "global/SliderField.html" with field=form.justify_tax_evasion & field_name="justify_tax_evasion" & min_value=1 & max_value=10 & left_label="1 – Mai giustificato" & right_label="10 – Sempre giustificato" & accessible_label="Giustificabilità del non pagare le tasse" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Tenersi del denaro trovato.</p>
+    {% include "global/SliderField.html" with field=form.justify_keep_found_money & field_name="justify_keep_found_money" & min_value=1 & max_value=10 & left_label="1 – Mai giustificato" & right_label="10 – Sempre giustificato" & accessible_label="Giustificabilità del tenersi denaro trovato" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Non segnalare il danno fatto per caso (senza volerlo) a un veicolo in sosta.</p>
+    {% include "global/SliderField.html" with field=form.justify_not_report_vehicle_damage & field_name="justify_not_report_vehicle_damage" & min_value=1 & max_value=10 & left_label="1 – Mai giustificato" & right_label="10 – Sempre giustificato" & accessible_label="Giustificabilità del non segnalare un danno accidentale" %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

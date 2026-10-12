@@ -1,0 +1,25 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-question">
+    <p class="survey-question__text">In generale, quanto ti ritieni religioso/a su una scala da 0 a 10, dove 0 significa 'per nulla religioso' e 10 'molto religioso'?</p>
+    {% include "global/SliderField.html" with field=form.religiosity & field_name="religiosity" & min_value=0 & max_value=10 & left_label="0 – Per nulla religioso/a" & right_label="10 – Molto religioso/a" & accessible_label="Quanto ti ritieni religioso o religiosa" %}
+</div>
+
+<div class="survey-question" data-political-exclusive>
+    <p class="survey-question__text">In politica si parla talvolta di ‘sinistra’ e di ‘destra’. Dove ti collocheresti su questa scala, dove 0 significa sinistra e 10 significa destra?</p>
+    {% include "global/SliderField.html" with field=form.political_position & field_name="political_position" & min_value=0 & max_value=10 & left_label="0 – Sinistra" & right_label="10 – Destra" & accessible_label="Collocazione politica da sinistra a destra" & exclusive_alternative_id="id_political_no_position" %}
+    <div class="survey-option-box">
+        {{ form.political_no_position }}
+        <label for="id_political_no_position">Non mi colloco su questa scala</label>
+    </div>
+</div>
+
+<div class="survey-question">
+    <p class="survey-question__text">Abitualmente con che frequenza ti rechi in chiesa o in altro luogo di culto?</p>
+    {{ form.worship_attendance }}
+    {% formfield_errors 'worship_attendance' %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

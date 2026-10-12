@@ -1,0 +1,22 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+{% if show_staircase_introduction %}
+<div class="survey-introduction">
+    Per favore immagina la seguente situazione: puoi scegliere tra un pagamento sicuro di una determinata somma di denaro, o una lotteria, dove avresti la stessa probabilità di ottenere 150 euro o nulla. Ti presenteremo 5 differenti situazioni.
+</div>
+{% endif %}
+
+<p class="survey-staircase-step">Situazione {{ decision_number }} di 5</p>
+
+{% if is_first_retry %}
+<p class="survey-question__instruction">Ti riproponiamo la prima situazione.</p>
+{% endif %}
+
+<div class="survey-question">
+    <p class="survey-question__text">Cosa preferiresti: una lotteria con il 50% di possibilità di ricevere 150 euro e il 50% di possibilità di non ricevere nulla, oppure un pagamento sicuro di {{ certain_amount }} euro?</p>
+    {% formfield decision_field label="" %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

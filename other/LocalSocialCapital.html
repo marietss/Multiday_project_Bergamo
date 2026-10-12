@@ -1,0 +1,20 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+{% formfield 'local_collective_action' %}
+
+<div class="survey-question" data-collective-action-details hidden>
+    {% formfield 'local_collective_action_details' %}
+</div>
+
+<div class="survey-question">
+    <p class="survey-question__text">Ritieni che nella maggior parte dei casi la gente sia altruista o che pensi invece solo a sé stessa?</p>
+    {% include "global/SliderField.html" with field=form.perceived_altruism & field_name="perceived_altruism" & min_value=0 & max_value=10 & left_label="0 – In generale la gente pensa solo a se stessa" & right_label="10 – La gente nella maggior parte dei casi è altruista" & accessible_label="Percezione dell'altruismo delle persone" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">In generale, diresti che la maggior parte delle persone cercherebbe di approfittarsi di te, se ne avesse l’occasione, o che cercherebbe di comportarsi correttamente?</p>
+    {% include "global/SliderField.html" with field=form.perceived_fairness & field_name="perceived_fairness" & min_value=0 & max_value=10 & left_label="0 – La maggior parte delle persone cercherebbe di approfittarsi di me" & right_label="10 – La maggior parte delle persone cercherebbe di comportarsi correttamente" & accessible_label="Percezione della correttezza delle persone" %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

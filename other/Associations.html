@@ -1,0 +1,46 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-introduction">
+    Per ciascuna delle seguenti organizzazioni, indica se sei attualmente iscritto/a selezionando “Sono membro” e/o se hai partecipato alle sue attività o riunioni negli ultimi 12 mesi selezionando “Ho partecipato negli ultimi 12 mesi”. Se nessuna delle organizzazioni indicate si applica a te, seleziona “Nessuna delle precedenti” in fondo alla pagina.
+</div>
+
+<div data-association-exclusive>
+    <div class="association-list">
+        <div class="association-card"><p class="association-card__name">Partiti politici</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.political_party_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.political_party_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+        <div class="association-card"><p class="association-card__name">Organizzazioni sindacali (sindacati confederali, autonomi, sindacati di tutte le categorie, dei pensionati, ecc.)</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.trade_union_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.trade_union_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+        <div class="association-card"><p class="association-card__name">Associazioni o gruppi di volontariato</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.volunteering_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.volunteering_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+        <div class="association-card"><p class="association-card__name">Associazioni ecologiche, per i diritti civili, per la pace</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.civic_environment_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.civic_environment_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+        <div class="association-card"><p class="association-card__name">Associazioni o gruppi sportivi</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.sports_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.sports_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+        <div class="association-card"><p class="association-card__name">Associazioni culturali, ricreative o di altro tipo</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.cultural_recreational_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.cultural_recreational_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+        <div class="association-card"><p class="association-card__name">Associazioni professionali o di categoria</p><div class="association-card__choices">
+            <label class="association-choice" data-organisation-checkbox>{{ form.professional_member }} <span>Sono membro</span></label>
+            <label class="association-choice" data-organisation-checkbox>{{ form.professional_participated }} <span>Ho partecipato negli ultimi 12 mesi</span></label>
+        </div></div>
+    </div>
+    <div class="survey-option-box">
+        {{ form.associations_none }}
+        <label for="id_associations_none">Nessuna delle precedenti</label>
+    </div>
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

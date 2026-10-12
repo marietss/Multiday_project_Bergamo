@@ -1,0 +1,16 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+{% formfield 'generalized_trust' %}
+
+<div class="survey-question">
+    <p class="survey-question__text">Immagina la seguente situazione: Oggi hai ricevuto inaspettatamente 700 euro. Quanto di questa somma doneresti per una giusta causa?</p>
+    <div class="survey-input-affix">
+        {{ form.unexpected_money_donation }}
+        <span class="survey-input-affix__suffix">€</span>
+    </div>
+    {% formfield_errors 'unexpected_money_donation' %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

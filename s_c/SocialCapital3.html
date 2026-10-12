@@ -1,0 +1,23 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-introduction survey-scale-instruction">
+    <p>Quanto sono appropriate le seguenti affermazioni per descrivere la tua persona?</p>
+    <p>Per favore, indica la tua risposta su una scala da 0 a 10, dove 0 significa “Non mi descrive per niente” e 10 significa “Mi descrive perfettamente”.</p>
+</div>
+
+<div class="survey-question">
+    <p class="survey-question__text">Presumo che le persone abbiano solo le migliori intenzioni.</p>
+    {% include "global/SliderField.html" with field=form.best_intentions & field_name="best_intentions" & min_value=0 & max_value=10 & left_label="0 – Non mi descrive per niente" & right_label="10 – Mi descrive perfettamente" & accessible_label="Presumo che le persone abbiano solo le migliori intenzioni" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Quando qualcuno mi fa un favore sono disposto a restituirglielo.</p>
+    {% include "global/SliderField.html" with field=form.positive_reciprocity & field_name="positive_reciprocity" & min_value=0 & max_value=10 & left_label="0 – Non mi descrive per niente" & right_label="10 – Mi descrive perfettamente" & accessible_label="Quando qualcuno mi fa un favore sono disposto a restituirglielo" %}
+</div>
+<div class="survey-question">
+    <p class="survey-question__text">Se vengo trattato molto ingiustamente, mi vendicherò alla prima occasione, anche se ci sarà un costo per farlo.</p>
+    {% include "global/SliderField.html" with field=form.revenge & field_name="revenge" & min_value=0 & max_value=10 & left_label="0 – Non mi descrive per niente" & right_label="10 – Mi descrive perfettamente" & accessible_label="Disponibilità a vendicarsi dopo un trattamento ingiusto" %}
+</div>
+
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}

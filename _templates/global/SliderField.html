@@ -1,0 +1,24 @@
+<div class="survey-slider survey-slider--unanswered"
+     data-required="true"
+     {% if is_defined('exclusive_alternative_id') and exclusive_alternative_id %}data-exclusive-alternative="{{ exclusive_alternative_id }}"{% endif %}>
+    <div class="survey-slider__storage">{{ field }}</div>
+    <div class="survey-slider__control">
+        <input class="survey-slider__range"
+               type="range"
+               min="{{ min_value }}"
+               max="{{ max_value }}"
+               step="1"
+               aria-label="{{ accessible_label }}"
+               aria-describedby="{{ field_name }}-endpoints {{ field_name }}-value">
+        <div class="survey-slider__feedback">
+            <span class="survey-slider__value-label">Valore selezionato</span>
+            <output class="survey-slider__value" id="{{ field_name }}-value" aria-live="polite">—</output>
+        </div>
+    </div>
+    <div class="survey-slider__endpoints" id="{{ field_name }}-endpoints">
+        <span>{{ left_label }}</span>
+        <span>{{ right_label }}</span>
+    </div>
+    <div class="survey-client-error" hidden>Per favore, rispondi a questa domanda.</div>
+    {% formfield_errors field_name %}
+</div>

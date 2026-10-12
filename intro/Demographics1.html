@@ -1,0 +1,11 @@
+{% extends "global/Page.html" %}
+
+{% block survey_content %}
+<div class="survey-introduction">
+    Ti chiediamo di rispondere onestamente e di leggere ogni domanda con attenzione. Tutte le informazioni saranno anonime e utilizzate solo a fini statistici.
+</div>
+{% formfield 'sex_at_birth' %}
+{% formfield 'age' %}
+{% formfield 'current_municipality' %}
+<div class="survey-actions">{% next_button %}</div>
+{% endblock %}
