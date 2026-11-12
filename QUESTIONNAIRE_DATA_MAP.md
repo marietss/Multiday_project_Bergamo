@@ -61,6 +61,7 @@ Categorical fields store the machine-readable codes defined in each app's
 | Q6 | `intro.Player.number_of_children` |
 | Q7 | `intro.Player.education_level` |
 | Q8 | `intro.Player.employment_status` |
+| Q8 occupation follow-up | `intro.Player.occupation_category` |
 | Q9 | `intro.Player.net_monthly_income` |
 | Q10 | `s_c.Player.generalized_trust` |
 | Q11 | `s_c.Player.unexpected_money_donation` |
@@ -142,6 +143,115 @@ For existing SQLite databases, stop the server and run
 idempotent migration backs up the database and preserves all legacy names,
 leaving their new codes NULL. No legacy name is automatically harmonized.
 The script also documents the corresponding PostgreSQL ALTER TABLE statement.
+
+## Education, employment and occupation
+
+All three are required single-choice demographic variables. “Non so” and
+“Preferisco non rispondere”, where offered, are valid answers. Occupation is
+a socioeconomic covariate only and is not included in any index.
+
+`education_level`: “Qual è il livello di istruzione più alto che hai completato?”
+
+| Code | Label |
+|---|---|
+| `doctorate` | Dottorato di ricerca o titolo equivalente |
+| `masters_or_equivalent` | Laurea magistrale o specialistica, laurea a ciclo unico, laurea del vecchio ordinamento o titolo equivalente |
+| `bachelors_its_or_equivalent` | Laurea triennale, diploma universitario, diploma ITS Academy o titolo equivalente |
+| `upper_secondary_diploma_or_ifts` | Diploma di scuola secondaria di secondo grado (maturità o equivalente) o certificato di specializzazione tecnica superiore (IFTS) |
+| `upper_secondary_vocational_no_maturita` | Qualifica o diploma professionale di livello secondario superiore, senza maturità |
+| `lower_secondary` | Licenza di scuola secondaria di primo grado (scuola media) |
+| `vocational_initiation_school` | Licenza di scuola di avviamento professionale (percorso triennale dopo la scuola elementare) |
+| `primary_or_none` | Licenza di scuola primaria (scuola elementare) o nessun titolo di studio |
+| `dont_know` | Non so |
+| `prefer_not_to_answer` | Preferisco non rispondere |
+
+`employment_status`: “Quale delle seguenti opzioni descrive meglio la tua attuale condizione occupazionale?”
+
+| Code | Label |
+|---|---|
+| `employee_full_time` | Lavoratore/lavoratrice dipendente a tempo pieno |
+| `employee_part_time` | Lavoratore/lavoratrice dipendente a tempo parziale |
+| `self_employed` | Lavoratore/lavoratrice autonomo/a o libero/a professionista |
+| `unemployed_seeking` | Disoccupato/a, in cerca di lavoro |
+| `not_employed_not_seeking` | Non occupato/a e non in cerca di lavoro |
+| `parental_leave` | In congedo parentale |
+| `student` | Studente/studentessa |
+| `retired` | Pensionato/a |
+| `homemaker_caregiver` | Casalingo/a o caregiver |
+| `other` | Altro |
+| `prefer_not_to_answer` | Preferisco non rispondere |
+
+`occupation_category`: “Quale delle seguenti opzioni descrive meglio la tua professione attuale o, se non lavori attualmente, l'ultima svolta?”
+
+| Code | Label |
+|---|---|
+| `manager` | Dirigente |
+| `professional` | Professione intellettuale, scientifica o di elevata specializzazione |
+| `technician` | Professione tecnica |
+| `clerical` | Impiegato/a di ufficio |
+| `services_sales` | Addetto/a ai servizi o alle vendite |
+| `skilled_agriculture_forestry_fishing` | Lavoratore/lavoratrice qualificato/a dell'agricoltura, delle foreste o della pesca |
+| `craft_skilled_worker` | Artigiano/a o operaio/a specializzato/a |
+| `plant_machine_operator_assembler` | Conduttore/conduttrice di impianti o macchinari / addetto/a al montaggio |
+| `elementary_occupation` | Professione non qualificata |
+| `armed_forces` | Professione nelle forze armate |
+| `never_worked` | Non ho mai svolto un’attività lavorativa |
+| `dont_know` | Non so |
+| `prefer_not_to_answer` | Preferisco non rispondere |
+
+All four items remain on Demographics3, ordered education, employment,
+occupation, income. The occupation follow-up retains the historical Q8/Q9
+documentation references; no later question numbers or stages are shifted.
+
+### Legacy data and migration
+
+`scripts/migrate_occupation_category.py` adds a nullable column to an existing
+SQLite database and creates a timestamped backup. Legacy occupation stays NULL.
+This schema migration itself does not remap education/employment. Fresh databases
+receive the column from the model; PostgreSQL migration SQL is in the script.
+
+The active development database has now been normalized to the finalized code
+system. Production analysis should use only that finalized code system.
+The following historical labels explain the conversion decisions:
+
+| Old education code | Original meaning |
+|---|---|
+| `lower_secondary_or_less` | Licenza media inferiore (scuola media) o titolo inferiore |
+| `upper_secondary` | Diploma di scuola superiore (Maturità o equivalente) |
+| `bachelors` | Laurea triennale (o diploma universitario di 3 anni) |
+| `masters_or_postgraduate` | Laurea magistrale/specialistica (o laurea vecchio ordinamento) e/o Master post-laurea |
+| `doctorate` | Dottorato di ricerca; retained for the new doctorate/equivalent category |
+
+### Development data normalization (2026-11-12)
+
+There were 24 participant records at migration time (the original 20 plus four
+subsequently created records). All were preserved. A timestamped SQLite backup
+was created before any values were updated:
+`db.sqlite3.before-demographic-normalization-20261112T211337245569Z.bak`.
+
+| Field | Old code | Final value | Rows changed |
+|---|---|---|---:|
+| Employment | `not_working_not_seeking` | `not_employed_not_seeking` | 1 |
+| Education | `bachelors` | `bachelors_its_or_equivalent` | 2 |
+| Education | `upper_secondary` | `upper_secondary_diploma_or_ifts` | 1 |
+| Education | `lower_secondary_or_less` | NULL | 1 |
+| Education | `masters_or_postgraduate` | NULL | 1 |
+
+The old lower-secondary-or-less category does not distinguish lower secondary
+from lower education. The actual old `masters_or_postgraduate` category included
+“e/o Master post-laurea”, so a master's/specialist degree cannot be inferred.
+These two ambiguous responses were set to NULL rather than guessed. There was
+no separate combined doctorate/postgraduate-Master response in the stored data.
+
+Already-finalized employment values `employee_full_time` (2 rows) and
+`unemployed_seeking` (2 rows) were retained unchanged; 19 employment values were
+already NULL. Three education responses now use non-NULL finalized codes and
+21 are NULL (19 originally missing plus the two ambiguous responses).
+No obsolete non-NULL education or employment codes remain.
+
+All 24 occupation values remain NULL, including all original 20 participants;
+occupation cannot be reconstructed from the legacy questionnaire. No other
+columns or tables were changed by the normalization.
 
 ## Q9 income codes (unchanged)
 

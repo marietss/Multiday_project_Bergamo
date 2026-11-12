@@ -9,6 +9,9 @@ from . import (
     Demographics2,
     Demographics3,
     INCOME_CHOICES,
+    EDUCATION_CHOICES,
+    EMPLOYMENT_CHOICES,
+    OCCUPATION_CHOICES,
     Intro,
     Structure,
     _has_at_least_two_letters,
@@ -122,11 +125,27 @@ class PlayerBot(Bot):
         for removed_code in REMOVED_INCOME_CODES:
             assert removed_code not in income_html
         income_code = self.case if self.case in INCOME_TEST_CODES else 'income_04_1500_1999'
-        yield Demographics3, dict(
-            education_level='masters_or_postgraduate',
-            employment_status='employee_full_time',
+        category_index = [case for case in CASES if case != 'screenout'].index(self.case)
+        answers = dict(
+            education_level=EDUCATION_CHOICES[category_index % 10][0],
+            employment_status=EMPLOYMENT_CHOICES[category_index % 11][0],
+            occupation_category=OCCUPATION_CHOICES[category_index % 13][0],
             net_monthly_income=income_code,
         )
+        assert self.player.field_maybe_none('occupation_category') is None
+        for choices in [EDUCATION_CHOICES, EMPLOYMENT_CHOICES, OCCUPATION_CHOICES]:
+            for code, label in choices:
+                assert f'value="{code}"' in income_html
+        if self.case == 'path_a':
+            for missing_field in ['education_level', 'employment_status', 'occupation_category']:
+                incomplete = answers.copy()
+                incomplete.pop(missing_field)
+                yield SubmissionMustFail(Demographics3, incomplete, error_fields=[missing_field])
+                assert 'This field is required' not in self.participant_bot.html
+                assert 'Questo campo è obbligatorio' in self.participant_bot.html
+        yield Demographics3, answers
+        for field_name, code in answers.items():
+            assert getattr(self.player, field_name) == code
         assert self.player.net_monthly_income == income_code
         assert '3 di 13' in self.participant_bot.html
         yield SubmissionMustFail(AttentionCheck1, {})

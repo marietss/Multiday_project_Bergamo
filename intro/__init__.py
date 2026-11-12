@@ -21,6 +21,49 @@ INCOME_CHOICES = [
     ('prefer_not_to_answer', 'Preferisco non rispondere'),
 ]
 
+EDUCATION_CHOICES = [
+    ('doctorate', 'Dottorato di ricerca o titolo equivalente'),
+    ('masters_or_equivalent', 'Laurea magistrale o specialistica, laurea a ciclo unico, laurea del vecchio ordinamento o titolo equivalente'),
+    ('bachelors_its_or_equivalent', 'Laurea triennale, diploma universitario, diploma ITS Academy o titolo equivalente'),
+    ('upper_secondary_diploma_or_ifts', 'Diploma di scuola secondaria di secondo grado (maturità o equivalente) o certificato di specializzazione tecnica superiore (IFTS)'),
+    ('upper_secondary_vocational_no_maturita', 'Qualifica o diploma professionale di livello secondario superiore, senza maturità'),
+    ('lower_secondary', 'Licenza di scuola secondaria di primo grado (scuola media)'),
+    ('vocational_initiation_school', 'Licenza di scuola di avviamento professionale (percorso triennale dopo la scuola elementare)'),
+    ('primary_or_none', 'Licenza di scuola primaria (scuola elementare) o nessun titolo di studio'),
+    ('dont_know', 'Non so'),
+    ('prefer_not_to_answer', 'Preferisco non rispondere'),
+]
+
+EMPLOYMENT_CHOICES = [
+    ('employee_full_time', 'Lavoratore/lavoratrice dipendente a tempo pieno'),
+    ('employee_part_time', 'Lavoratore/lavoratrice dipendente a tempo parziale'),
+    ('self_employed', 'Lavoratore/lavoratrice autonomo/a o libero/a professionista'),
+    ('unemployed_seeking', 'Disoccupato/a, in cerca di lavoro'),
+    ('not_employed_not_seeking', 'Non occupato/a e non in cerca di lavoro'),
+    ('parental_leave', 'In congedo parentale'),
+    ('student', 'Studente/studentessa'),
+    ('retired', 'Pensionato/a'),
+    ('homemaker_caregiver', 'Casalingo/a o caregiver'),
+    ('other', 'Altro'),
+    ('prefer_not_to_answer', 'Preferisco non rispondere'),
+]
+
+OCCUPATION_CHOICES = [
+    ('manager', 'Dirigente'),
+    ('professional', 'Professione intellettuale, scientifica o di elevata specializzazione'),
+    ('technician', 'Professione tecnica'),
+    ('clerical', 'Impiegato/a di ufficio'),
+    ('services_sales', 'Addetto/a ai servizi o alle vendite'),
+    ('skilled_agriculture_forestry_fishing', "Lavoratore/lavoratrice qualificato/a dell'agricoltura, delle foreste o della pesca"),
+    ('craft_skilled_worker', 'Artigiano/a o operaio/a specializzato/a'),
+    ('plant_machine_operator_assembler', 'Conduttore/conduttrice di impianti o macchinari / addetto/a al montaggio'),
+    ('elementary_occupation', 'Professione non qualificata'),
+    ('armed_forces', 'Professione nelle forze armate'),
+    ('never_worked', 'Non ho mai svolto un’attività lavorativa'),
+    ('dont_know', 'Non so'),
+    ('prefer_not_to_answer', 'Preferisco non rispondere'),
+]
+
 
 def _has_at_least_two_letters(value):
     """Unicode-safe Q3/Q4 minimum-text rule."""
@@ -109,29 +152,20 @@ class Player(BasePlayer):
     )
     # Q7
     education_level = models.StringField(
-        label="Qual è il titolo di studio più elevato che hai conseguito?",
-        choices=[
-            ('lower_secondary_or_less', 'Licenza media inferiore (scuola media) o titolo inferiore'),
-            ('upper_secondary', 'Diploma di scuola superiore (Maturità o equivalente)'),
-            ('bachelors', 'Laurea triennale (o diploma universitario di 3 anni)'),
-            ('masters_or_postgraduate', 'Laurea magistrale/specialistica (o laurea vecchio ordinamento) e/o Master post-laurea'),
-            ('doctorate', 'Dottorato di ricerca'),
-        ],
+        label="Qual è il livello di istruzione più alto che hai completato?",
+        choices=EDUCATION_CHOICES,
         widget=widgets.RadioSelect,
     )
     # Q8
     employment_status = models.StringField(
-        label="Qual è la tua attuale condizione lavorativa?",
-        choices=[
-            ('employee_full_time', 'Lavoratore/lavoratrice dipendente a tempo pieno'),
-            ('employee_part_time', 'Lavoratore/lavoratrice dipendente a tempo parziale'),
-            ('self_employed', 'Lavoratore/lavoratrice autonomo/a o libero professionista'),
-            ('unemployed_seeking', 'Disoccupato/a in cerca di occupazione'),
-            ('homemaker', 'Casalingo/Casalinga'),
-            ('student', 'Studente/Studentessa'),
-            ('not_working_not_seeking', 'Non ho attualmente un lavoro e non sto cercando lavoro'),
-            ('retired', 'Pensionato/a'),
-        ],
+        label="Quale delle seguenti opzioni descrive meglio la tua attuale condizione occupazionale?",
+        choices=EMPLOYMENT_CHOICES,
+        widget=widgets.RadioSelect,
+    )
+    # Q8 occupation follow-up; demographic covariate only, no index membership.
+    occupation_category = models.StringField(
+        label="Quale delle seguenti opzioni descrive meglio la tua professione attuale o, se non lavori attualmente, l'ultima svolta?",
+        choices=OCCUPATION_CHOICES,
         widget=widgets.RadioSelect,
     )
     # Q9
@@ -215,7 +249,7 @@ class Demographics2(Page):
 
 class Demographics3(Page):
     form_model = 'player'
-    form_fields = ['education_level', 'employment_status', 'net_monthly_income']
+    form_fields = ['education_level', 'employment_status', 'occupation_category', 'net_monthly_income']
 
     @staticmethod
     def is_displayed(player):
