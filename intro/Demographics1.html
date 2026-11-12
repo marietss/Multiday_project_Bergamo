@@ -6,6 +6,18 @@
 </div>
 {% formfield 'sex_at_birth' %}
 {% formfield 'age' %}
-{% formfield 'current_municipality' %}
+<div class="survey-question municipality-combobox" data-municipality-url="{% static 'global/istat_comuni.json' %}">
+    <label class="survey-question__text" for="municipality-search">In quale comune vivi attualmente?</label>
+    <input id="municipality-search" class="form-control" type="text" autocomplete="off"
+           role="combobox" aria-autocomplete="list" aria-expanded="false"
+           aria-controls="municipality-results" aria-describedby="municipality-status" required>
+    <div hidden>{{ form.current_municipality }}{{ form.current_municipality_istat_code }}</div>
+    <ul id="municipality-results" role="listbox" hidden></ul>
+    <p id="municipality-status" class="survey-question__instruction" role="status" aria-live="polite"></p>
+    {% formfield_errors 'current_municipality' %}
+</div>
 <div class="survey-actions">{% next_button %}</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'global/municipality.js' %}"></script>
 {% endblock %}

@@ -69,7 +69,6 @@
     }
 
     const minimumAlphabeticFields = {
-        id_current_municipality: 'Per favore, inserisci un comune valido.',
         id_influential_place: 'Per favore, inserisci un luogo valido.',
         id_local_collective_action_details: 'Per favore, descrivi in che modo utilizzando qualche frase.'
     };
@@ -116,6 +115,7 @@
     }
 
     function participantValidationMessage(input) {
+        if (input.id === 'municipality-search') return 'Seleziona un comune dall’elenco.';
         if (minimumAlphabeticFields[input.id]) {
             return minimumAlphabeticFields[input.id];
         }

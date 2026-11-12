@@ -1,4 +1,5 @@
 from otree.api import *
+from municipality_data import MUNICIPALITY_ERROR, valid_municipality
 
 from survey_common import can_continue_questionnaire, record_first_page_time, record_questionnaire_start, survey_page_context
 
@@ -24,11 +25,6 @@ INCOME_CHOICES = [
 def _has_at_least_two_letters(value):
     """Unicode-safe Q3/Q4 minimum-text rule."""
     return sum(character.isalpha() for character in (value or '').strip()) >= 2
-
-
-def current_municipality_error_message(player, value):
-    if not _has_at_least_two_letters(value):
-        return 'Per favore, inserisci un comune valido utilizzando almeno 2 lettere.'
 
 
 def influential_place_error_message(player, value):
@@ -81,12 +77,15 @@ class Player(BasePlayer):
     # Q2
     age = models.IntegerField(label="Quanti anni hai?", min=18, max=100)
     # Q3
-    current_municipality = models.StringField(label="In quale comune vivi attualmente?")
+    # Required together by Demographics1.error_message; blank=True allows the
+    # same Italian selection error for missing and mismatched submissions.
+    current_municipality = models.StringField(label="In quale comune vivi attualmente?", blank=True)
+    current_municipality_istat_code = models.StringField(blank=True)
     # Q4
     influential_place = models.LongStringField(
         label=(
             "Tra i luoghi in cui hai vissuto durante l’infanzia o l’adolescenza, "
-            "quale ritieni abbia influenzato maggiormente il tuo modo di vivere e di pensare?"
+            "quale ritieni abbia influenzato maggiormente il tuo attuale modo di vivere e di pensare?"
         )
     )
     # Q5
@@ -137,7 +136,7 @@ class Player(BasePlayer):
     )
     # Q9
     net_monthly_income = models.StringField(
-        label="Qual è stato il tuo reddito medio mensile netto (dopo le tasse) nell’ultimo anno?",
+        label="Qual è approssimativamente il tuo reddito personale mensile netto?",
         choices=INCOME_CHOICES,
         widget=widgets.RadioSelect,
     )
@@ -184,7 +183,12 @@ class ScreenOut(Page):
 
 class Demographics1(Page):
     form_model = 'player'
-    form_fields = ['sex_at_birth', 'age', 'current_municipality']
+    form_fields = ['sex_at_birth', 'age', 'current_municipality', 'current_municipality_istat_code']
+
+    @staticmethod
+    def error_message(player, values):
+        if not valid_municipality(values.get('current_municipality'), values.get('current_municipality_istat_code')):
+            return {'current_municipality': MUNICIPALITY_ERROR}
 
     @staticmethod
     def is_displayed(player):
