@@ -360,6 +360,102 @@ class MaximilesRedirectTests(unittest.TestCase):
                 self.assertEqual(rows[0]['participant.label'], 'U00012345-CaSe')
                 self.assertIn('participant.seconds_survey_time', rows[0])
 
+    def test_http_consent_combinations_screenout_metadata_and_export(self):
+        from starlette.testclient import TestClient
+        from otree.asgi import app
+        from otree.database import db
+        from otree.models import Participant
+        from otree.export import export_wide
+        from intro import Consent, Intro, Structure, Demographics1
+        from terminal_redirects import finalize_terminal_redirect
+        from settings import MAXIMILES_REDIRECT_URLS
+        import intro
+        import s_c
+        import other
+
+        self.assertEqual(intro.page_sequence[:3], [Intro, Structure, Consent])
+        # Include both an explicit refusal and an entirely unanswered second
+        # item. All missing-consent cases must be processed, not form errors.
+        for read, decision in [(True, 'accept'), (True, None), (False, 'accept'),
+                               (False, None), (True, 'decline'), (False, 'decline')]:
+            with self.subTest(read=read, decision=decision):
+                participant = self.participant()
+                pk, code = participant.id, participant.code
+                db.commit()
+                del participant
+                client = TestClient(app)
+                start = datetime(2026, 11, 17, 12, tzinfo=timezone.utc)
+                with patch('survey_common.datetime', wraps=datetime) as clock:
+                    clock.now.return_value = start
+                    response = client.get('/InitializeParticipant/' + code, allow_redirects=True)
+                    for _ in range(2):
+                        response = client.post(response.url, data={}, allow_redirects=True)
+                    self.assertIn('/Consent/', response.url)
+                    # Even very long information/consent reading is not a
+                    # questionnaire timing violation.
+                    clock.now.return_value = start + timedelta(hours=2)
+                    data = {}
+                    if read:
+                        data['consent_read'] = 'True'
+                    if decision is not None:
+                        data['consent_accept'] = decision
+                    response = client.post(response.url, data=data, allow_redirects=True)
+                self.assertEqual(response.status_code, 200)
+                db.expire_all()
+                current = Participant.objects_get(id=pk)
+                player = current.get_player('intro', 1)
+                session_code = player.session.code
+                self.assertEqual(player.consent_read, read)
+                self.assertEqual(player.field_maybe_none('consent_accept') or None, decision)
+                self.assertEqual(current.label, 'U00012345-CaSe')
+                if read and decision == 'accept':
+                    self.assertIn('/Demographics1/', response.url)
+                    self.assertTrue(current.vars['phase1_questionnaire_timing_started'])
+                    self.assertNotIn('phase1_terminal_redirect', current.vars)
+                else:
+                    self.assertIn('/ScreenOut/', response.url)
+                    self.assertEqual(current.terminal_status, 'screenout')
+                    self.assertEqual(current.terminal_reason, 'consent_not_provided')
+                    self.assertFalse(current.vars.get('phase1_questionnaire_timing_started', False))
+                    for name in ['seconds_survey_time', 'seconds_total_study_time', 'time_ended_utc']:
+                        self.assertIsNone(current.vars.get(name))
+                    self.assertIn(MAXIMILES_REDIRECT_URLS['screenout'], response.text)
+                    self.assertNotIn(MAXIMILES_REDIRECT_URLS['quality'], response.text)
+                    frozen = dict(current.vars['phase1_terminal_redirect'])
+                    for errors, seconds in [(0, 239), (0, 300), (2, 1201)]:
+                        current.seconds_survey_time = seconds
+                        result = finalize_terminal_redirect(current, {}, attention_error=errors, completed=True)
+                        self.assertEqual(result, frozen)
+                        self.assertEqual(current.terminal_status, 'screenout')
+                        self.assertEqual(current.terminal_reason, 'consent_not_provided')
+                    # Undo only the simulated competing timing inputs above.
+                    current.vars.pop('seconds_survey_time')
+                    Consent.before_next_page(player, False)
+                    self.assertEqual(current.vars['phase1_terminal_redirect'], frozen)
+                    self.assertTrue(current.vars['screened_out'])
+                    for app_module in [intro, s_c, other]:
+                        for page in app_module.page_sequence:
+                            if page.__name__ not in ['Intro', 'Structure', 'Consent', 'ScreenOut']:
+                                target = current.get_player(app_module.C.NAME_IN_URL, 1)
+                                self.assertFalse(page.is_displayed(target), page.__name__)
+                    # Re-entry stays on ScreenOut; a crafted continue is rejected.
+                    db.commit()
+                    response = client.get('/InitializeParticipant/' + code, allow_redirects=True)
+                    self.assertIn('/ScreenOut/', response.url)
+                    response = client.post(response.url, data={}, allow_redirects=True)
+                    self.assertIn('/ScreenOut/', response.url)
+                    self.assertIn('Non è possibile proseguire', response.text)
+                output = io.StringIO()
+                export_wide(output, session_code=session_code)
+                row = next(csv.DictReader(io.StringIO(output.getvalue())))
+                self.assertEqual(row['participant.label'], 'U00012345-CaSe')
+                self.assertEqual(row['intro.1.player.consent_read'], '1' if read else '0')
+                self.assertEqual(row['intro.1.player.consent_accept'], decision or '')
+                if not (read and decision == 'accept'):
+                    self.assertEqual(row['participant.terminal_status'], 'screenout')
+                    self.assertEqual(row['participant.terminal_reason'], 'consent_not_provided')
+                    self.assertEqual(row['participant.seconds_survey_time'], '')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,6 @@
 from otree.api import *
 from municipality_data import MUNICIPALITY_ERROR, valid_municipality
+from terminal_redirects import finalize_terminal_redirect
 
 from survey_common import can_continue_questionnaire, record_first_page_time, record_questionnaire_start, survey_page_context, timed_questionnaire_page
 
@@ -79,9 +80,6 @@ class C(BaseConstants):
     NAME_IN_URL = 'intro'
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 1
-    # TODO(study team): replace this placeholder with the approved screen-out URL.
-    SCREENOUT_REDIRECT_URL = 'https://google.com'
-    SCREENOUT_REDIRECT_DELAY_MS = 1500
 
 
 class Subsession(BaseSubsession):
@@ -99,12 +97,14 @@ class Player(BasePlayer):
     )
     attention_check_1_failed = models.BooleanField(blank=True)
     consent_read = models.BooleanField(
-        label="Ho letto le informazioni sullo studio.", widget=widgets.Checkbox
+        label="Ho letto le informazioni sullo studio.", widget=widgets.Checkbox,
+        blank=True, initial=False,
     )
     consent_accept = models.StringField(
         label="Acconsento a partecipare allo studio.",
         choices=[('accept', 'Acconsento'), ('decline', 'Non acconsento')],
         widget=widgets.RadioSelect,
+        blank=True,
     )
 
     # Q1
@@ -199,8 +199,16 @@ class Consent(Page):
 
     @staticmethod
     def before_next_page(player, timeout_happened):
-        gave_consent = player.consent_read and player.consent_accept == 'accept'
+        if player.participant.vars.get('phase1_terminal_redirect') is not None:
+            return
+        gave_consent = (player.field_maybe_none('consent_read') is True
+                        and player.field_maybe_none('consent_accept') == 'accept')
         player.participant.vars['screened_out'] = not gave_consent
+        if not gave_consent:
+            finalize_terminal_redirect(
+                player.participant, player.session.config,
+                attention_error=None, consent_not_provided=True,
+            )
 
 
 class ScreenOut(Page):
@@ -211,8 +219,16 @@ class ScreenOut(Page):
     @staticmethod
     def vars_for_template(player):
         context = survey_page_context('Grazie')
-        context.update(redirect_url=C.SCREENOUT_REDIRECT_URL, redirect_delay_ms=C.SCREENOUT_REDIRECT_DELAY_MS)
+        terminal = finalize_terminal_redirect(
+            player.participant, player.session.config,
+            attention_error=None, consent_not_provided=True,
+        )
+        context['terminal_redirect_url'] = terminal['url']
         return context
+
+    @staticmethod
+    def error_message(player, values):
+        return 'Non è possibile proseguire con il questionario.'
 
 
 @timed_questionnaire_page

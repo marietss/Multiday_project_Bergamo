@@ -4,7 +4,7 @@ MAXIMILES_REDIRECT_URLS = {
     'complete': 'https://survey.maximiles.com/static-complete?p=177137_7285c59a',
     'quality': 'https://survey.maximiles.com/static-quality?p=177137',
     'speeder': 'https://survey.maximiles.com/static-speeder?p=177137',
-    # Available only: no current condition routes participants here.
+    # Consent not provided, before entry to the substantive questionnaire.
     'screenout': 'https://survey.maximiles.com/static-screenout?p=177137_17a5978d',
 }
 

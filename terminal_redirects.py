@@ -1,4 +1,4 @@
-"""Server-side, single-outcome Phase-1 routing. No eligibility/quotas rule."""
+"""Server-side, single-outcome Phase-1 routing, including consent refusal."""
 import math
 from settings import MAXIMILES_REDIRECT_URLS
 
@@ -6,7 +6,8 @@ SPEEDER_THRESHOLD_SECONDS = 240
 MAX_QUESTIONNAIRE_SECONDS = 1200
 
 
-def finalize_terminal_redirect(participant, config, *, attention_error, completed=False):
+def finalize_terminal_redirect(participant, config, *, attention_error, completed=False,
+                               consent_not_provided=False):
     """Persist one decision; refreshes/re-entry return that same destination.
 
     Quality uses the two-check error total OR more than 1200 survey seconds.
@@ -16,7 +17,10 @@ def finalize_terminal_redirect(participant, config, *, attention_error, complete
     if stored is not None:
         return stored
     seconds = participant.vars.get('seconds_survey_time')
-    if attention_error == 2 or (seconds is not None and seconds > MAX_QUESTIONNAIRE_SECONDS):
+    if consent_not_provided:
+        outcome, key = 'screenout', 'screenout_redirect_url'
+        reason = 'consent_not_provided'
+    elif attention_error == 2 or (seconds is not None and seconds > MAX_QUESTIONNAIRE_SECONDS):
         outcome, key = 'quality', 'attention_screenout_url'
         reason = 'quality_attention_checks' if attention_error == 2 else 'quality_over_1200'
     elif completed:

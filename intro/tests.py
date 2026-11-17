@@ -66,6 +66,9 @@ class PlayerBot(Bot):
             yield Consent, dict(consent_read=True, consent_accept='decline')
             assert self.participant.time_first_page_utc == first_page_time
             assert self.participant.vars.get('seconds_total_study_time') is None
+            assert self.participant.terminal_status == 'screenout'
+            assert self.participant.terminal_reason == 'consent_not_provided'
+            assert 'https://survey.maximiles.com/static-screenout?p=177137_17a5978d' in self.participant_bot.html
             return
         yield Consent, dict(consent_read=True, consent_accept='accept')
         assert '1 di 13' in self.participant_bot.html

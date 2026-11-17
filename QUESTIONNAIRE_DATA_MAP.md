@@ -79,7 +79,7 @@ and copied into the `initial_survey` session configuration:
 | Complete / Target 1 | `complete_redirect_url` | `https://survey.maximiles.com/static-complete?p=177137_7285c59a` |
 | Quality | `attention_screenout_url` | `https://survey.maximiles.com/static-quality?p=177137` |
 | Speeder | `speeder_redirect_url` | `https://survey.maximiles.com/static-speeder?p=177137` |
-| Screen-out (available, inactive) | `screenout_redirect_url` | `https://survey.maximiles.com/static-screenout?p=177137_17a5978d` |
+| Screen-out (consent not provided) | `screenout_redirect_url` | `https://survey.maximiles.com/static-screenout?p=177137_17a5978d` |
 
 For sessions created before these configuration keys existed, absent/empty
 values fall back to these same supplied project URLs. No session-data migration
@@ -97,7 +97,7 @@ No SQL schema migration is required. Both are assigned server-side by
 `finalize_terminal_redirect`, together with the outcome/URL snapshot, and remain
 unchanged on later calls, refreshes or re-entry. They are not form fields and
 are never populated from browser input. They are blank before a terminal
-decision (including an independent consent refusal with no Maximiles outcome).
+decision. Consent refusal now receives its own explicit Screen-out outcome.
 
 | terminal_status | terminal_reason | Meaning |
 |---|---|---|
@@ -105,7 +105,7 @@ decision (including an independent consent refusal with no Maximiles outcome).
 | `speeder` | `speeder_under_240` | Valid completion below 240 seconds, not Quality |
 | `quality` | `quality_attention_checks` | Both existing attention checks failed |
 | `quality` | `quality_over_1200` | The submission time guard found more than 1200 seconds |
-| `screenout` | No current reason/value assigned | Reserved for a future actual screening rule; inactive |
+| `screenout` | `consent_not_provided` | One or both consent declarations not affirmed; survey not started |
 
 Both fields appear as `participant.terminal_status` and
 `participant.terminal_reason` in the native **wide/all-apps CSV**, alongside
@@ -161,10 +161,34 @@ Quality exit preserves the elapsed `seconds_survey_time` without fabricating
 passes validation after 1200 seconds, its completion timestamps are recorded
 normally, but the outcome is Quality.
 
-End and AttentionScreenOut render a shared fallback link and a single guarded
-automatic redirect after 1.5 seconds. There is no current route to the Maximiles
-Screen-out URL and no quota-full condition. Existing consent refusal handling
-remains separate and does not use this Maximiles Screen-out URL.
+End, AttentionScreenOut and consent ScreenOut render a shared fallback link and
+a single guarded automatic redirect after 1.5 seconds. Missing consent is the
+only current Maximiles Screen-out criterion. There is no quota-full condition.
+
+### Consent Screen-out before questionnaire entry
+
+The third page is `intro.Consent`, following Intro and Structure. Its existing
+fields are `consent_read` (Boolean checkbox, “Ho letto le informazioni sullo
+studio.”) and `consent_accept` (string radio field with `accept` / `decline`,
+“Acconsento” / “Non acconsento”). Their texts and raw coding are unchanged.
+Both fields allow unselected submission so the server can process refusal:
+only `consent_read == True` AND `consent_accept == 'accept'` permits entry.
+Unchecked/missing `consent_read` is stored as false; unselected `consent_accept`
+is blank. Explicit `decline` remains stored as `decline`.
+
+`Consent.before_next_page` sets `screened_out` and finalizes
+`screenout / consent_not_provided` before the redirect when either affirmation
+is missing. This decision precedes and is separate from Quality/Speed/Complete.
+The existing `intro.ScreenOut` page now uses the shared Maximiles automatic
+redirect/fallback, and rejects further Continue submissions. The survey timer
+has not started, no Speeder/Quality duration rule is evaluated, and no completed
+timing values are fabricated. `time_first_page_utc` remains stored. Subsequent
+questionnaire pages are disabled. Once assigned, the destination/status/reason
+cannot be replaced by another outcome. No other Screen-out condition is active.
+
+Raw consent values remain in native app exports and in wide CSV as
+`intro.1.player.consent_read` and `intro.1.player.consent_accept`; wide CSV also
+contains terminal status/reason, participant.label and the blank survey duration.
 
 `test_maximiles_redirects.py` tests the boundary, precedence, re-entry, label,
 and timing-export behavior, including the 1199/1200/1201-second boundaries and
