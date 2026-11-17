@@ -1,7 +1,7 @@
 from otree.api import *
 from municipality_data import MUNICIPALITY_ERROR, valid_municipality
 
-from survey_common import can_continue_questionnaire, record_first_page_time, record_questionnaire_start, survey_page_context
+from survey_common import can_continue_questionnaire, record_first_page_time, record_questionnaire_start, survey_page_context, timed_questionnaire_page
 
 
 doc = """Introduzione, consenso e domande sociodemografiche (Q1-Q9)."""
@@ -215,6 +215,7 @@ class ScreenOut(Page):
         return context
 
 
+@timed_questionnaire_page
 class Demographics1(Page):
     form_model = 'player'
     form_fields = ['sex_at_birth', 'age', 'current_municipality', 'current_municipality_istat_code']
@@ -234,6 +235,7 @@ class Demographics1(Page):
         return survey_page_context(stage='demographics1')
 
 
+@timed_questionnaire_page
 class Demographics2(Page):
     form_model = 'player'
     form_fields = ['influential_place', 'marital_status', 'number_of_children']
@@ -247,6 +249,7 @@ class Demographics2(Page):
         return survey_page_context(stage='demographics2')
 
 
+@timed_questionnaire_page
 class Demographics3(Page):
     form_model = 'player'
     form_fields = ['education_level', 'employment_status', 'occupation_category', 'net_monthly_income']
@@ -260,6 +263,7 @@ class Demographics3(Page):
         return survey_page_context(stage='demographics3')
 
 
+@timed_questionnaire_page
 class AttentionCheck1(Page):
     form_model = 'player'
     form_fields = ['attention_check_1']

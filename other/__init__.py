@@ -1,9 +1,11 @@
 from otree.api import *
+from terminal_redirects import finalize_terminal_redirect
 
 from survey_common import (
     can_continue_questionnaire,
     record_questionnaire_end,
     survey_page_context,
+    timed_questionnaire_page,
 )
 
 
@@ -271,6 +273,7 @@ def staircase_context(player, decision_field, decision_number, amount, *, show_i
     return context
 
 
+@timed_questionnaire_page
 class PoliticsReligion(Page):
     form_model = 'player'
     form_fields = ['religiosity', 'political_position', 'political_no_position', 'worship_attendance']
@@ -293,6 +296,7 @@ class PoliticsReligion(Page):
             return 'Indica una posizione politica oppure seleziona “Non mi colloco su questa scala”.'
 
 
+@timed_questionnaire_page
 class RiskGeneral(Page):
     form_model = 'player'
     form_fields = ['general_risk_willingness']
@@ -306,6 +310,7 @@ class RiskGeneral(Page):
         return survey_page_context(stage='risk_general')
 
 
+@timed_questionnaire_page
 class AttentionCheck2(Page):
     form_model = 'player'
     form_fields = ['attention_check_2']
@@ -331,17 +336,28 @@ class AttentionCheck2(Page):
         player.attention_check_2_failed = player.attention_check_2 != 'cat'
         player.attention_error = int(first.attention_check_1_failed) + int(player.attention_check_2_failed)
         player.participant.vars['attention_screened_out'] = player.attention_error == 2
+        if player.attention_error == 2:
+            finalize_terminal_redirect(
+                player.participant, player.session.config,
+                attention_error=player.attention_error,
+            )
 
 
 class AttentionScreenOut(Page):
     @staticmethod
     def is_displayed(player):
-        return player.participant.vars.get('attention_screened_out', False)
+        return (player.participant.vars.get('attention_screened_out', False)
+                or player.participant.vars.get('survey_time_limit_exceeded', False))
 
     @staticmethod
     def vars_for_template(player):
-        context = survey_page_context('Grazie', stage='risk_general')
-        context['attention_redirect_url'] = player.session.config.get('attention_screenout_url', '')
+        time_quality = player.participant.vars.get('survey_time_limit_exceeded', False)
+        context = survey_page_context('Grazie') if time_quality else survey_page_context('Grazie', stage='risk_general')
+        context['terminal_quality'] = time_quality
+        terminal = finalize_terminal_redirect(
+            player.participant, player.session.config, attention_error=player.field_maybe_none('attention_error'),
+        )
+        context['terminal_redirect_url'] = terminal['url']
         return context
 
     @staticmethod
@@ -350,6 +366,7 @@ class AttentionScreenOut(Page):
         return 'Non è possibile proseguire con il questionario.'
 
 
+@timed_questionnaire_page
 class RiskStaircase1(Page):
     form_model = 'player'
     form_fields = ['risk_staircase_first_attempt']
@@ -382,6 +399,7 @@ class RiskStaircase1(Page):
             set_next_staircase_amount(player, 1, choice)
 
 
+@timed_questionnaire_page
 class RiskStaircaseRetry(Page):
     form_model = 'player'
     form_fields = ['risk_staircase_first_retry']
@@ -411,6 +429,7 @@ class RiskStaircaseRetry(Page):
             set_next_staircase_amount(player, 1, choice)
 
 
+@timed_questionnaire_page
 class RiskStaircase2(Page):
     form_model = 'player'
     form_fields = ['risk_staircase_choice_2']
@@ -429,6 +448,7 @@ class RiskStaircase2(Page):
         finish_staircase_step(player, 2, player.risk_staircase_choice_2)
 
 
+@timed_questionnaire_page
 class RiskStaircase3(Page):
     form_model = 'player'
     form_fields = ['risk_staircase_choice_3']
@@ -447,6 +467,7 @@ class RiskStaircase3(Page):
         finish_staircase_step(player, 3, player.risk_staircase_choice_3)
 
 
+@timed_questionnaire_page
 class RiskStaircase4(Page):
     form_model = 'player'
     form_fields = ['risk_staircase_choice_4']
@@ -465,6 +486,7 @@ class RiskStaircase4(Page):
         finish_staircase_step(player, 4, player.risk_staircase_choice_4)
 
 
+@timed_questionnaire_page
 class RiskStaircase5(Page):
     form_model = 'player'
     form_fields = ['risk_staircase_choice_5']
@@ -483,6 +505,7 @@ class RiskStaircase5(Page):
         finish_staircase_step(player, 5, player.risk_staircase_choice_5)
 
 
+@timed_questionnaire_page
 class CivicNorms(Page):
     form_model = 'player'
     form_fields = [
@@ -507,6 +530,7 @@ class CivicNorms(Page):
         player.civic_norms_score = calculate_civic_norms_score(values)
 
 
+@timed_questionnaire_page
 class Associations(Page):
     form_model = 'player'
     form_fields = ORGANISATION_FIELDS + ['associations_none']
@@ -538,6 +562,7 @@ class Associations(Page):
             setattr(player, field_name, value)
 
 
+@timed_questionnaire_page
 class LocalSocialCapital(Page):
     form_model = 'player'
     form_fields = [
@@ -570,16 +595,34 @@ class LocalSocialCapital(Page):
         if player.local_collective_action != 'yes':
             player.local_collective_action_details = None
         record_questionnaire_end(player.participant)
+        finalize_terminal_redirect(
+            player.participant, player.session.config,
+            attention_error=player.attention_error, completed=True,
+        )
 
 
 class End(Page):
     @staticmethod
     def is_displayed(player):
-        return can_continue_questionnaire(player)
+        return (can_continue_questionnaire(player)
+                or player.participant.vars.get('survey_time_limit_exceeded', False))
 
     @staticmethod
     def vars_for_template(player):
-        return survey_page_context('Questionario completato', 'local_social_capital')
+        time_quality = player.participant.vars.get('survey_time_limit_exceeded', False)
+        context = survey_page_context('Grazie') if time_quality else survey_page_context('Questionario completato', 'local_social_capital')
+        context['terminal_quality'] = time_quality
+        terminal = finalize_terminal_redirect(
+            player.participant, player.session.config,
+            attention_error=player.field_maybe_none('attention_error'), completed=True,
+        )
+        context['terminal_redirect_url'] = terminal['url']
+        return context
+
+    @staticmethod
+    def error_message(player, values):
+        if player.participant.vars.get('survey_time_limit_exceeded'):
+            return 'Non è possibile proseguire con il questionario.'
 
 
 page_sequence = [

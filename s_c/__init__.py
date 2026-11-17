@@ -1,6 +1,6 @@
 from otree.api import *
 
-from survey_common import can_continue_questionnaire, survey_page_context
+from survey_common import can_continue_questionnaire, survey_page_context, timed_questionnaire_page
 
 
 doc = """Capitale sociale, fiducia e reciprocità (Q10-Q18)."""
@@ -55,6 +55,7 @@ class Player(BasePlayer):
     unconditional_charitable_giving = models.IntegerField(min=0, max=10)
 
 
+@timed_questionnaire_page
 class SocialCapital1(Page):
     form_model = 'player'
     form_fields = ['generalized_trust', 'unexpected_money_donation']
@@ -68,6 +69,7 @@ class SocialCapital1(Page):
         return survey_page_context(stage='social_capital1')
 
 
+@timed_questionnaire_page
 class SocialCapital2(Page):
     form_model = 'player'
     form_fields = ['reciprocity_gift_value']
@@ -81,6 +83,7 @@ class SocialCapital2(Page):
         return survey_page_context(stage='social_capital2')
 
 
+@timed_questionnaire_page
 class SocialCapital3(Page):
     form_model = 'player'
     form_fields = ['best_intentions', 'positive_reciprocity', 'revenge']
@@ -94,6 +97,7 @@ class SocialCapital3(Page):
         return survey_page_context(stage='social_capital3')
 
 
+@timed_questionnaire_page
 class SocialCapital4(Page):
     form_model = 'player'
     form_fields = ['punish_personal_unfairness', 'punish_unfairness_to_others', 'unconditional_charitable_giving']

@@ -1,6 +1,7 @@
 """Shared questionnaire navigation and server-side timing helpers."""
 
 from datetime import datetime, timezone
+from functools import wraps
 
 
 SURVEY_STEPS = {
@@ -42,6 +43,7 @@ def can_continue_questionnaire(player):
     return not (
         player.participant.vars.get('screened_out', False)
         or player.participant.vars.get('attention_screened_out', False)
+        or player.participant.vars.get('survey_time_limit_exceeded', False)
     )
 
 
@@ -75,3 +77,41 @@ def record_questionnaire_end(participant):
             0.0, (ended - datetime.fromisoformat(first_page)).total_seconds()
         )
     participant.vars['phase1_questionnaire_timing_ended'] = True
+
+
+def check_questionnaire_time_limit(player):
+    """Check only on a validated submission, using the original start timestamp.
+
+    Interim elapsed time is exported in the existing seconds_survey_time field.
+    An early Quality exit does not fabricate final completion timestamps.
+    """
+    from terminal_redirects import MAX_QUESTIONNAIRE_SECONDS, finalize_terminal_redirect
+
+    participant = player.participant
+    if (not participant.vars.get('phase1_questionnaire_timing_started')
+            or participant.vars.get('phase1_terminal_redirect') is not None):
+        return
+    started = datetime.fromisoformat(participant.time_started_utc)
+    participant.seconds_survey_time = max(0.0, (datetime.now(timezone.utc) - started).total_seconds())
+    if participant.seconds_survey_time > MAX_QUESTIONNAIRE_SECONDS:
+        participant.vars['survey_time_limit_exceeded'] = True
+        finalize_terminal_redirect(participant, player.session.config, attention_error=None)
+
+
+def timed_questionnaire_page(page_class):
+    """Add the shared submission guard while preserving the page's own hook.
+
+    oTree runs before_next_page after form validation/population and before
+    choosing the next page. GET, refresh and invalid forms never run this guard.
+    """
+    original = getattr(page_class, 'before_next_page', None)
+
+    def before_next_page(player, timeout_happened):
+        check_questionnaire_time_limit(player)
+        if original is not None:
+            original(player, timeout_happened)
+
+    if original is not None:
+        before_next_page = wraps(original)(before_next_page)
+    page_class.before_next_page = staticmethod(before_next_page)
+    return page_class

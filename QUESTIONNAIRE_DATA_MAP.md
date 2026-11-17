@@ -1,5 +1,27 @@
 # Phase 1 questionnaire data map
 
+## Linking Phase 1 and Phase 2 with the recruitment ID
+
+Use the native oTree room URL:
+`/room/my_room/?participant_label=U12345` (replace the room and ID as needed).
+An active Phase-1 session must be assigned to the room. The standard room
+welcome/start flow forwards the query parameter and stores the received value
+unchanged in `participant.label`; no new study ID is generated. URL-encode IDs
+when constructing links so special characters survive normal URL decoding.
+
+`participant.label` is included in native per-app CSV and wide CSV exports.
+Phase 2 must receive that same recruitment ID through its own
+`participant_label` parameter and use `participant.label` as the cross-phase
+linking key. Do not substitute `participant.code`, `id_in_session`, or the
+retained legacy `unique_id` field. The existing Phase-1 `unique_id` is not
+automatically populated or used for matching.
+
+`settings.ROOMS` defines `my_room` without `use_secure_urls=True` and without a
+participant-label file, so no hash is required by its current configuration.
+If a future room enables secure URLs, use oTree's participant-specific URL
+including its generated `hash`; do not bypass that validation. Two distinct IDs
+and repeated entry/export behavior are covered by `test_room_participant_label.py`.
+
 ## Approved wording revisions
 
 - Municipality (Q3): “In quale comune vivi attualmente?” (already the displayed wording).
@@ -43,10 +65,111 @@ Two failures set `participant.vars['attention_screened_out']` and lead to the
 dedicated AttentionScreenOut page immediately before Q23. All later questionnaire
 pages are disabled. This state is separate from consent screen-out. The terminal
 page has no continue button and rejects POSTs. Session configuration key
-`attention_screenout_url` in settings.py controls its redirect. The empty
-development default leaves the participant on this page without redirecting.
-TODO(Bilendi): supply the dedicated attention-screenout URL before production.
+`attention_screenout_url` in settings.py controls its Maximiles Quality redirect.
+This URL is now supplied; see terminal routing below.
 Neither check adds a substantive stage; the total remains 13.
+
+## Maximiles terminal routing
+
+The four supplied URLs are defined once in `settings.MAXIMILES_REDIRECT_URLS`
+and copied into the `initial_survey` session configuration:
+
+| Outcome | Session configuration key | URL |
+|---|---|---|
+| Complete / Target 1 | `complete_redirect_url` | `https://survey.maximiles.com/static-complete?p=177137_7285c59a` |
+| Quality | `attention_screenout_url` | `https://survey.maximiles.com/static-quality?p=177137` |
+| Speeder | `speeder_redirect_url` | `https://survey.maximiles.com/static-speeder?p=177137` |
+| Screen-out (available, inactive) | `screenout_redirect_url` | `https://survey.maximiles.com/static-screenout?p=177137_17a5978d` |
+
+For sessions created before these configuration keys existed, absent/empty
+values fall back to these same supplied project URLs. No session-data migration
+is needed, and the previous empty Quality URL cannot prevent the redirect.
+
+`terminal_redirects.finalize_terminal_redirect` chooses and saves exactly one
+outcome/URL in `participant.vars['phase1_terminal_redirect']`. Re-entry returns
+the stored decision. No recruitment label or additional URL parameters are added.
+
+### Terminal status and reason
+
+`participant.terminal_status` and `participant.terminal_reason` are declared in
+`PARTICIPANT_FIELDS` and stored in the existing participant vars database column.
+No SQL schema migration is required. Both are assigned server-side by
+`finalize_terminal_redirect`, together with the outcome/URL snapshot, and remain
+unchanged on later calls, refreshes or re-entry. They are not form fields and
+are never populated from browser input. They are blank before a terminal
+decision (including an independent consent refusal with no Maximiles outcome).
+
+| terminal_status | terminal_reason | Meaning |
+|---|---|---|
+| `complete` | `completed_normally` | Valid completion, 240–1200 seconds inclusive, not Quality |
+| `speeder` | `speeder_under_240` | Valid completion below 240 seconds, not Quality |
+| `quality` | `quality_attention_checks` | Both existing attention checks failed |
+| `quality` | `quality_over_1200` | The submission time guard found more than 1200 seconds |
+| `screenout` | No current reason/value assigned | Reserved for a future actual screening rule; inactive |
+
+Both fields appear as `participant.terminal_status` and
+`participant.terminal_reason` in the native **wide/all-apps CSV**, alongside
+`participant.label` and `participant.seconds_survey_time`. The existing nested
+snapshot also stores `reason`; its outcome and URL remain the routing source.
+
+Reasons preserve the **first assigned terminal decision**. If a single call
+receives both causes before any decision exists, `quality_attention_checks`
+takes precedence. In the existing real submission sequence, the elapsed-time
+guard runs before the per-page hook. If the second check is submitted after
+1200 seconds, the time guard assigns `quality_over_1200` first and that reason
+is not overwritten when the two-check failure total is then calculated.
+The original attention flags/`other.Player.attention_error` and the exported
+`seconds_survey_time` retain the evidence for both causes: error total 2 plus
+time greater than 1200 shows that both criteria were met, without another field.
+This adds metadata only; routing precedence, URLs and all thresholds are unchanged.
+
+Precedence is Quality, then Speeder, then Complete. Quality uses only
+`attention_error == 2`, derived from the two existing blue questions (the colour
+question requiring `dog` and the 3 × 2 question requiring `cat`), OR
+`seconds_survey_time > 1200`. Two attention failures are finalized in
+`AttentionCheck2.before_next_page`; the existing early-stop point and dedicated
+AttentionScreenOut page remain. One failure alone permits continuation.
+
+Every substantive/attention page has the shared `timed_questionnaire_page`
+submission guard. After validation, but before choosing the next page, it
+recalculates elapsed UTC seconds from the original Demographics1 timestamp and
+updates the existing `seconds_survey_time`. More than 1200 seconds sets
+`participant.vars['survey_time_limit_exceeded']` and saves the immutable Quality
+destination. Exactly 1200 seconds still permits continuation. Existing per-page
+hooks continue to preserve raw/derived responses.
+
+No GET, refresh, re-entry or client timer can trigger this limit while a
+participant is working on a page. The participant's next valid Continue/Avanti
+submission triggers Quality. Early exits skip subsequent questionnaire pages
+to AttentionScreenOut. If that page is already behind the participant (during
+Q23 or later), subsequent questions are skipped to the existing End page,
+which displays the shared Quality message/link instead of completion content.
+No new questionnaire pages or progress stages are introduced. Both terminal
+pages block further submissions after a time-limit termination.
+
+For a valid completion, `LocalSocialCapital.before_next_page` first calls the
+existing server-side timing finalizer and then chooses Quality for more than
+1200 seconds, Speeder for less than 240 seconds, otherwise Complete. Exactly
+240 and exactly 1200 seconds are Complete if both checks were not failed.
+This is the substantive questionnaire interval from first Demographics1 render
+through successful Q28 submission; Intro/Structure/Consent reading time is
+excluded. `seconds_total_study_time` continues to include Intro reading time,
+but is not the Speeder criterion. Both durations and UTC timestamps remain
+stored and are available in the native wide CSV export for audit. An early
+Quality exit preserves the elapsed `seconds_survey_time` without fabricating
+`time_ended_utc` or `seconds_total_study_time`. If the final Q28 form itself
+passes validation after 1200 seconds, its completion timestamps are recorded
+normally, but the outcome is Quality.
+
+End and AttentionScreenOut render a shared fallback link and a single guarded
+automatic redirect after 1.5 seconds. There is no current route to the Maximiles
+Screen-out URL and no quota-full condition. Existing consent refusal handling
+remains separate and does not use this Maximiles Screen-out URL.
+
+`test_maximiles_redirects.py` tests the boundary, precedence, re-entry, label,
+and timing-export behavior, including the 1199/1200/1201-second boundaries and
+real HTTP early/late time-limit exits, in an isolated in-memory database. The app bot tests
+also check the actual terminal-page destination after normal and Quality paths.
 
 Categorical fields store the machine-readable codes defined in each app's
 `Player` model; the Italian text is only the participant-facing label.
@@ -310,7 +433,7 @@ All timestamps use server-side UTC ISO 8601 strings. Both durations are seconds.
 | `time_started_utc` | First arrival on Demographics1; substantive questionnaire start. |
 | `time_ended_utc` | Final questionnaire completion after Q28 passes validation. |
 | `seconds_total_study_time` | Intro to final completion: end minus first-page timestamp. |
-| `seconds_survey_time` | Demographics1 to final completion: end minus questionnaire start. |
+| `seconds_survey_time` | Elapsed seconds from Demographics1, updated at valid submissions and frozen at final completion or an early terminal Quality exit. |
 
 `record_questionnaire_end`, called by `LocalSocialCapital.before_next_page`,
 calculates both durations from the same stored end timestamp. Durations are

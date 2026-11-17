@@ -1,12 +1,14 @@
 {% extends "global/Page.html" %}
 {% block survey_content %}
+{% if terminal_quality %}
+{% include "global/QualityMessage.html" %}
+{% else %}
 <p>Grazie per il tempo dedicato allo studio.
 In base alle risposte fornite alle domande di controllo, non è possibile
 proseguire con il questionario.</p>
-{% if attention_redirect_url %}
-<p>Se il reindirizzamento non parte, <a id="attention-redirect" href="{{ attention_redirect_url }}">clicca qui</a>.</p>
 {% endif %}
+{% include "global/TerminalRedirect.html" %}
 {% endblock %}
 {% block scripts %}
-<script src="{% static 'global/attention-screenout.js' %}"></script>
+<script src="{% static 'global/terminal-redirect.js' %}"></script>
 {% endblock %}

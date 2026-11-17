@@ -182,7 +182,11 @@ class PlayerBot(Bot):
         from intro import AttentionCheck1
         first_copy = SimpleNamespace(attention_check_1=first.attention_check_1)
         participant_copy = SimpleNamespace(vars={}, get_player=lambda *args: first_copy)
-        second_copy = SimpleNamespace(attention_check_2=second_answer, participant=participant_copy)
+        first_copy.participant = participant_copy
+        second_copy = SimpleNamespace(
+            attention_check_2=second_answer, participant=participant_copy,
+            session=SimpleNamespace(config=dict(current.session.config)),
+        )
         for _ in range(2):
             AttentionCheck1.before_next_page(first_copy, False)
             AttentionCheck2.before_next_page(second_copy, False)
@@ -192,7 +196,8 @@ class PlayerBot(Bot):
             assert self.participant.vars.get('seconds_total_study_time') is None
             assert 'non è possibile' in self.participant_bot.html
             assert '9 di 13' in self.participant_bot.html
-            assert 'attention-redirect' not in self.participant_bot.html
+            assert 'https://survey.maximiles.com/static-quality?p=177137' in self.participant_bot.html
+            assert self.participant.vars['phase1_terminal_redirect']['outcome'] == 'quality'
             yield SubmissionMustFail(AttentionScreenOut, {}, check_html=False)
             for page in [RiskStaircase1, RiskStaircase2, RiskStaircase3, RiskStaircase4,
                          RiskStaircase5, CivicNorms, Associations, LocalSocialCapital]:
@@ -373,3 +378,6 @@ class PlayerBot(Bot):
         assert self.participant.time_ended_utc == end_time
         assert self.participant.seconds_total_study_time == total_time
         assert self.participant.seconds_survey_time == survey_time
+        terminal = self.participant.vars['phase1_terminal_redirect']
+        assert terminal['outcome'] == ('speeder' if survey_time < 240 else 'complete')
+        assert terminal['url'] in self.participant_bot.html
