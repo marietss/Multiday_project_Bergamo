@@ -47,6 +47,7 @@ PARTICIPANT_FIELDS = [
     'unique_id', 'time_ended_utc', 'seconds_survey_time',
     'time_first_page_utc', 'seconds_total_study_time',
     'terminal_status', 'terminal_reason',
+    'terminal_time_utc', 'time_otree_entry_utc',
 ]
 SESSION_FIELDS = []
 

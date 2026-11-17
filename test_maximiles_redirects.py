@@ -62,7 +62,7 @@ class MaximilesRedirectTests(unittest.TestCase):
 
     def test_completion_and_speed_boundaries(self):
         from settings import MAXIMILES_REDIRECT_URLS
-        for seconds, outcome in [(239, 'speeder'), (240, 'complete'), (301, 'complete'),
+        for seconds, outcome in [(179, 'speeder'), (180, 'complete'), (239, 'complete'), (301, 'complete'),
                                  (1199, 'complete'), (1200, 'complete'), (1201, 'quality')]:
             with self.subTest(seconds=seconds):
                 participant = self.participant()
@@ -70,10 +70,13 @@ class MaximilesRedirectTests(unittest.TestCase):
                 self.assertEqual(participant.seconds_survey_time, seconds)
                 self.assertEqual(participant.seconds_total_study_time, seconds + 120)
                 self.assertEqual(participant.vars['phase1_terminal_redirect']['outcome'], outcome)
-                reason = {'complete': 'completed_normally', 'speeder': 'speeder_under_240',
+                reason = {'complete': 'completed_normally', 'speeder': 'speeder_under_180',
                           'quality': 'quality_over_1200'}[outcome]
                 self.assertEqual(participant.terminal_status, outcome)
                 self.assertEqual(participant.terminal_reason, reason)
+                parsed_terminal = datetime.fromisoformat(participant.terminal_time_utc)
+                self.assertEqual(parsed_terminal.utcoffset(), timedelta(0))
+                self.assertTrue(participant.terminal_time_utc.endswith('+00:00'))
                 self.assertEqual(context['terminal_redirect_url'], MAXIMILES_REDIRECT_URLS[outcome])
                 self.assertEqual(participant.label, 'U00012345-CaSe')
                 self.assertNotEqual(context['terminal_redirect_url'], MAXIMILES_REDIRECT_URLS['screenout'])
@@ -105,7 +108,7 @@ class MaximilesRedirectTests(unittest.TestCase):
         self.assertEqual(context['terminal_redirect_url'], MAXIMILES_REDIRECT_URLS['quality'])
         # Even a later competing completion/speed signal cannot issue a new
         # destination for someone already terminated for Quality.
-        participant.seconds_survey_time = 239
+        participant.seconds_survey_time = 179
         repeated = finalize_terminal_redirect(participant, player.session.config,
                                               attention_error=2, completed=True)
         self.assertEqual(repeated, participant.vars['phase1_terminal_redirect'])
@@ -119,11 +122,12 @@ class MaximilesRedirectTests(unittest.TestCase):
         from other import LocalSocialCapital, End
         from otree.export import export_wide
         participant = self.participant()
-        player, _ = self.complete(participant, 239)
+        player, _ = self.complete(participant, 179)
         timestamps = (participant.time_first_page_utc, participant.time_started_utc,
                       participant.time_ended_utc, participant.seconds_survey_time,
                       participant.seconds_total_study_time)
         destination = dict(participant.vars['phase1_terminal_redirect'])
+        terminal_time = participant.terminal_time_utc
         status_reason = (participant.terminal_status, participant.terminal_reason)
         for _ in range(2):
             Intro.vars_for_template(participant.get_player('intro', 1))
@@ -134,15 +138,17 @@ class MaximilesRedirectTests(unittest.TestCase):
                          participant.time_ended_utc, participant.seconds_survey_time,
                          participant.seconds_total_study_time))
         self.assertEqual(participant.vars['phase1_terminal_redirect'], destination)
+        self.assertEqual(participant.terminal_time_utc, terminal_time)
         self.assertEqual((participant.terminal_status, participant.terminal_reason), status_reason)
         self.assertEqual(participant.label, 'U00012345-CaSe')
         output = io.StringIO()
         export_wide(output, session_code=player.session.code)
         rows = list(csv.DictReader(io.StringIO(output.getvalue())))
         self.assertEqual(rows[0]['participant.label'], 'U00012345-CaSe')
-        self.assertEqual(float(rows[0]['participant.seconds_survey_time']), 239)
+        self.assertEqual(float(rows[0]['participant.seconds_survey_time']), 179)
         self.assertEqual(rows[0]['participant.terminal_status'], 'speeder')
-        self.assertEqual(rows[0]['participant.terminal_reason'], 'speeder_under_240')
+        self.assertEqual(rows[0]['participant.terminal_reason'], 'speeder_under_180')
+        self.assertEqual(rows[0]['participant.terminal_time_utc'], terminal_time)
 
     def test_no_routing_before_completion_or_quality(self):
         from terminal_redirects import finalize_terminal_redirect
@@ -157,7 +163,7 @@ class MaximilesRedirectTests(unittest.TestCase):
     def test_existing_session_config_uses_supplied_urls(self):
         from settings import MAXIMILES_REDIRECT_URLS
         from terminal_redirects import finalize_terminal_redirect
-        for errors, seconds, outcome in [(2, 239, 'quality'), (0, 239, 'speeder'), (0, 240, 'complete')]:
+        for errors, seconds, outcome in [(2, 179, 'quality'), (0, 179, 'speeder'), (0, 180, 'complete')]:
             participant = self.participant()
             participant.vars['phase1_questionnaire_timing_ended'] = True
             participant.seconds_survey_time = seconds
@@ -293,7 +299,7 @@ class MaximilesRedirectTests(unittest.TestCase):
             self.assertEqual(current.vars['phase1_terminal_redirect'], frozen)
             self.assertIsNone(current.vars.get('time_ended_utc'))
             from terminal_redirects import finalize_terminal_redirect
-            for simulated_duration in [239, 300]:
+            for simulated_duration in [179, 300]:
                 # The saved terminal outcome wins over a competing criterion.
                 current.seconds_survey_time = simulated_duration
                 result = finalize_terminal_redirect(current, {}, attention_error=0, completed=True)
@@ -338,9 +344,9 @@ class MaximilesRedirectTests(unittest.TestCase):
         from otree.export import export_wide
         scenarios = [
             (300, 'dog', 'cat', 'complete', 'completed_normally'),
-            (239, 'dog', 'cat', 'speeder', 'speeder_under_240'),
+            (179, 'dog', 'cat', 'speeder', 'speeder_under_180'),
             (1201, 'dog', 'cat', 'quality', 'quality_over_1200'),
-            (239, 'blue', 'six', 'quality', 'quality_attention_checks'),
+            (179, 'blue', 'six', 'quality', 'quality_attention_checks'),
         ]
         for seconds, first, second, status, reason in scenarios:
             with self.subTest(status=status, reason=reason):
@@ -352,11 +358,14 @@ class MaximilesRedirectTests(unittest.TestCase):
                 saved = Participant.objects_get(id=pk)
                 self.assertEqual(saved.terminal_status, status)
                 self.assertEqual(saved.terminal_reason, reason)
+                terminal_time = saved.terminal_time_utc
+                self.assertEqual(datetime.fromisoformat(terminal_time).utcoffset(), timedelta(0))
                 output = io.StringIO()
                 export_wide(output, session_code=session_code)
                 rows = list(csv.DictReader(io.StringIO(output.getvalue())))
                 self.assertEqual(rows[0]['participant.terminal_status'], status)
                 self.assertEqual(rows[0]['participant.terminal_reason'], reason)
+                self.assertEqual(rows[0]['participant.terminal_time_utc'], terminal_time)
                 self.assertEqual(rows[0]['participant.label'], 'U00012345-CaSe')
                 self.assertIn('participant.seconds_survey_time', rows[0])
 
@@ -422,12 +431,15 @@ class MaximilesRedirectTests(unittest.TestCase):
                     self.assertIn(MAXIMILES_REDIRECT_URLS['screenout'], response.text)
                     self.assertNotIn(MAXIMILES_REDIRECT_URLS['quality'], response.text)
                     frozen = dict(current.vars['phase1_terminal_redirect'])
-                    for errors, seconds in [(0, 239), (0, 300), (2, 1201)]:
+                    frozen_terminal_time = current.terminal_time_utc
+                    self.assertEqual(datetime.fromisoformat(frozen_terminal_time).utcoffset(), timedelta(0))
+                    for errors, seconds in [(0, 179), (0, 300), (2, 1201)]:
                         current.seconds_survey_time = seconds
                         result = finalize_terminal_redirect(current, {}, attention_error=errors, completed=True)
                         self.assertEqual(result, frozen)
                         self.assertEqual(current.terminal_status, 'screenout')
                         self.assertEqual(current.terminal_reason, 'consent_not_provided')
+                        self.assertEqual(current.terminal_time_utc, frozen_terminal_time)
                     # Undo only the simulated competing timing inputs above.
                     current.vars.pop('seconds_survey_time')
                     Consent.before_next_page(player, False)
@@ -454,6 +466,7 @@ class MaximilesRedirectTests(unittest.TestCase):
                 if not (read and decision == 'accept'):
                     self.assertEqual(row['participant.terminal_status'], 'screenout')
                     self.assertEqual(row['participant.terminal_reason'], 'consent_not_provided')
+                    self.assertEqual(row['participant.terminal_time_utc'], frozen_terminal_time)
                     self.assertEqual(row['participant.seconds_survey_time'], '')
 
 

@@ -1,4 +1,5 @@
 from otree.api import *
+from participant_access import LabelRequiredPage as Page
 
 from survey_common import can_continue_questionnaire, survey_page_context, timed_questionnaire_page
 

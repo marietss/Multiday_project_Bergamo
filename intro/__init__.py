@@ -1,4 +1,5 @@
 from otree.api import *
+from participant_access import LabelRequiredPage as Page
 from municipality_data import MUNICIPALITY_ERROR, valid_municipality
 from terminal_redirects import finalize_terminal_redirect
 

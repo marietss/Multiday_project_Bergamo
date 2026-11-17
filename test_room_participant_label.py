@@ -70,6 +70,12 @@ class RoomParticipantLabelTest(unittest.TestCase):
             exported = {row['participant.label'] for row in rows if row['participant.label']}
             self.assertEqual(exported, set(labels))
 
+        # The room itself still uses native oTree URL validation; a missing ID
+        # is independently blocked when the participant reaches a study page.
+        response = client.get('/room/my_room/', params={'welcome_page_ok': '1'}, allow_redirects=True)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('Link non valido o incompleto', response.text)
+
 
 if __name__ == '__main__':
     unittest.main()

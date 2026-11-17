@@ -181,7 +181,7 @@ class PlayerBot(Bot):
         from types import SimpleNamespace
         from intro import AttentionCheck1
         first_copy = SimpleNamespace(attention_check_1=first.attention_check_1)
-        participant_copy = SimpleNamespace(vars={}, get_player=lambda *args: first_copy)
+        participant_copy = SimpleNamespace(vars={}, label='TEST-ID-fixture', get_player=lambda *args: first_copy)
         first_copy.participant = participant_copy
         second_copy = SimpleNamespace(
             attention_check_2=second_answer, participant=participant_copy,
@@ -379,5 +379,5 @@ class PlayerBot(Bot):
         assert self.participant.seconds_total_study_time == total_time
         assert self.participant.seconds_survey_time == survey_time
         terminal = self.participant.vars['phase1_terminal_redirect']
-        assert terminal['outcome'] == ('speeder' if survey_time < 240 else 'complete')
+        assert terminal['outcome'] == ('speeder' if survey_time < 180 else 'complete')
         assert terminal['url'] in self.participant_bot.html

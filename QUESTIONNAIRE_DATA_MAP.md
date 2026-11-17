@@ -22,6 +22,22 @@ If a future room enables secure URLs, use oTree's participant-specific URL
 including its generated `hash`; do not bypass that validation. Two distinct IDs
 and repeated entry/export behavior are covered by `test_room_participant_label.py`.
 
+All project pages inherit `participant_access.LabelRequiredPage`. Both GET and
+POST check that the stored `participant.label` is a non-empty string containing
+at least one non-whitespace character, before rendering questions or processing
+form submissions. Trimming is used only to test validity; the ID is never
+modified. Missing/None/empty/whitespace-only IDs receive the local Italian
+`global/InvalidParticipantLink.html` page (HTTP 403, no form, no continue link,
+no provider redirect). Neither survey timing nor a terminal classification is
+started. Use the complete recruitment room link containing a valid
+`participant_label` to enter. An ID in an ordinary form field or page query is
+not accepted as a replacement for the stored label. This also protects direct
+session links and ongoing pages independently of room settings.
+
+CLI bot fixtures explicitly supply `TEST-ID-<case>` before their first request;
+this is test-only setup. No production code generates a replacement ID. Existing
+development sessions without labels are deliberately blocked by this guard.
+
 ## Approved wording revisions
 
 - Municipality (Q3): “In quale comune vivi attualmente?” (already the displayed wording).
@@ -99,17 +115,25 @@ unchanged on later calls, refreshes or re-entry. They are not form fields and
 are never populated from browser input. They are blank before a terminal
 decision. Consent refusal now receives its own explicit Screen-out outcome.
 
+`participant.terminal_time_utc` is assigned in that same central function at
+the first terminal classification, including Screen-out and early Quality.
+It uses `utc_timestamps.utc_isoformat(datetime.now(timezone.utc))`. The existing
+stored-decision guard returns before any timestamp assignment on subsequent
+calls. This event time is not the time of clicking the external fallback link.
+The field is persisted in participant vars and appears in the wide CSV.
+
 | terminal_status | terminal_reason | Meaning |
 |---|---|---|
-| `complete` | `completed_normally` | Valid completion, 240–1200 seconds inclusive, not Quality |
-| `speeder` | `speeder_under_240` | Valid completion below 240 seconds, not Quality |
+| `complete` | `completed_normally` | Valid completion, 180–1200 seconds inclusive, not Quality |
+| `speeder` | `speeder_under_180` | Valid completion below 180 seconds, not Quality |
 | `quality` | `quality_attention_checks` | Both existing attention checks failed |
 | `quality` | `quality_over_1200` | The submission time guard found more than 1200 seconds |
 | `screenout` | `consent_not_provided` | One or both consent declarations not affirmed; survey not started |
 
 Both fields appear as `participant.terminal_status` and
 `participant.terminal_reason` in the native **wide/all-apps CSV**, alongside
-`participant.label` and `participant.seconds_survey_time`. The existing nested
+`participant.label`, `participant.terminal_time_utc` and
+`participant.seconds_survey_time`. The existing nested
 snapshot also stores `reason`; its outcome and URL remain the routing source.
 
 Reasons preserve the **first assigned terminal decision**. If a single call
@@ -149,8 +173,8 @@ pages block further submissions after a time-limit termination.
 
 For a valid completion, `LocalSocialCapital.before_next_page` first calls the
 existing server-side timing finalizer and then chooses Quality for more than
-1200 seconds, Speeder for less than 240 seconds, otherwise Complete. Exactly
-240 and exactly 1200 seconds are Complete if both checks were not failed.
+1200 seconds, Speeder for less than 180 seconds, otherwise Complete. Exactly
+180 and exactly 1200 seconds are Complete if both checks were not failed.
 This is the substantive questionnaire interval from first Demographics1 render
 through successful Q28 submission; Intro/Structure/Consent reading time is
 excluded. `seconds_total_study_time` continues to include Intro reading time,
@@ -449,13 +473,41 @@ missing, the score remains NULL.
 
 ## Phase-1 timing
 
-All timestamps use server-side UTC ISO 8601 strings. Both durations are seconds.
+All **project-owned** timestamps use the shared `utc_timestamps.utc_isoformat`
+serializer: `YYYY-MM-DDTHH:MM:SS.ffffff+00:00` (six microsecond digits, aware UTC).
+Naive datetimes are rejected by this serializer. Both durations are seconds.
+
+### Timestamp audit before this change
+
+An actual wide export of the 32 development participants was inspected:
+
+| Field/event | Owner/storage | Previous format | In native wide CSV? |
+|---|---|---|---|
+| `time_first_page_utc` | Project, participant vars | Aware UTC ISO with `+00:00` | Yes (4 populated) |
+| `time_ended_utc` | Project, participant vars | Aware UTC ISO with `+00:00` | Yes (6 populated) |
+| `time_started_utc` | Native participant column, reassigned once by project at Demographics1 | Mixed: naive UTC native entry / aware UTC ISO questionnaire start | Yes (8 populated) |
+| `seconds_survey_time`, `seconds_total_study_time` | Project, participant vars | Numeric durations, not timestamps | Yes |
+| `_last_page_timestamp`, `_last_request_timestamp`, `_timeout_expiration_time` | oTree internal participant timing | Native epoch values | No |
+| Session `_created` | oTree native session timestamp | Native representation | No |
+| Page-completion `epoch_time_completed`, queued task `epoch_time`, chat `timestamp` | Native framework event records, not study event fields | Native epoch values | Not wide; separate framework exports where supported |
+
+The native entry value is created by oTree using `datetime.utcnow()` without
+tzinfo. oTree internals are not modified. For Screen-out/blocked links that
+never reach Demographics1, that original column can still be naive in wide
+CSV; use its new aware project mirror `time_otree_entry_utc` for uniform analysis.
+That mirror interprets a naive value as UTC only because the native code
+explicitly defines it as UTC. The existing substantive-start reassignment is
+preserved. Internal native epoch fields are unchanged.
+
+### Current fields
 
 | Participant field | Meaning |
 |---|---|
 | `time_first_page_utc` | First arrival on Intro, recorded by `Intro.vars_for_template` through `record_first_page_time`. |
+| `time_otree_entry_utc` | ISO UTC copy of native initialization time, captured once at first project-page GET before Demographics1 replaces the native value. |
 | `time_started_utc` | First arrival on Demographics1; substantive questionnaire start. |
 | `time_ended_utc` | Final questionnaire completion after Q28 passes validation. |
+| `terminal_time_utc` | First assignment of terminal status/reason; available also for early Quality and consent Screen-out. |
 | `seconds_total_study_time` | Intro to final completion: end minus first-page timestamp. |
 | `seconds_survey_time` | Elapsed seconds from Demographics1, updated at valid submissions and frozen at final completion or an early terminal Quality exit. |
 
@@ -474,3 +526,12 @@ Structure, and Consent pages. `participant.time_ended_utc` and
 `participant.seconds_survey_time` are populated server-side by
 `LocalSocialCapital.before_next_page`, after the final questionnaire form has
 passed validation. Refreshes do not overwrite either timestamp.
+
+All project event fields above are directly available as `participant.<field>`
+in wide CSV. No risky retrospective normalization or SQL schema migration was
+performed: existing event timestamps/labels are not rewritten. A new native
+entry mirror is not invented for a legacy participant already past the start
+hook, and an unknown past terminal time is not backfilled with the current time.
+New terminal decisions always receive `terminal_time_utc`. The test suite writes
+a five-outcome synthetic wide export to `/tmp/phase1_timestamps_wide_test.csv`
+and re-parses all values to verify explicit UTC offsets and the ID/status/reason.

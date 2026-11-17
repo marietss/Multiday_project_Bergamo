@@ -2,6 +2,8 @@
 
 from datetime import datetime, timezone
 from functools import wraps
+from participant_access import has_participant_label
+from utc_timestamps import utc_isoformat
 
 
 SURVEY_STEPS = {
@@ -40,26 +42,45 @@ def survey_page_context(title=None, stage=None, subtitle=None):
 
 def can_continue_questionnaire(player):
     """Keep consent screen-outs out of every later app."""
-    return not (
+    return has_participant_label(player.participant) and not (
         player.participant.vars.get('screened_out', False)
         or player.participant.vars.get('attention_screened_out', False)
         or player.participant.vars.get('survey_time_limit_exceeded', False)
     )
 
 
+def record_otree_entry_time(participant):
+    """ISO mirror of native entry time, without changing oTree's original value.
+
+    oTree explicitly creates this native datetime in UTC without tzinfo.
+    Only this documented native value is interpreted as UTC when naive.
+    Do not reconstruct the entry from an already-replaced questionnaire start.
+    """
+    if (participant.vars.get('time_otree_entry_utc')
+            or participant.vars.get('phase1_questionnaire_timing_started')):
+        return
+    if participant.time_started_utc:
+        entered = datetime.fromisoformat(participant.time_started_utc)
+        if entered.tzinfo is None:
+            entered = entered.replace(tzinfo=timezone.utc)
+        participant.time_otree_entry_utc = utc_isoformat(entered)
+
+
 def record_first_page_time(participant):
     """Record the first Intro render once, using the existing UTC ISO format."""
     if not participant.vars.get('time_first_page_utc'):
-        participant.time_first_page_utc = datetime.now(timezone.utc).isoformat()
+        participant.time_first_page_utc = utc_isoformat(datetime.now(timezone.utc))
 
 
 def record_questionnaire_start(participant):
     """Start Phase-1 timing once, immediately before Demographics1 is shown."""
+    if not has_participant_label(participant):
+        return
     if not participant.vars.get('phase1_questionnaire_timing_started'):
         # oTree already has a built-in participant.time_started_utc column. Its
         # session-entry value is replaced here with the requested substantive
         # questionnaire start, rather than adding a duplicate custom field.
-        participant.time_started_utc = datetime.now(timezone.utc).isoformat()
+        participant.time_started_utc = utc_isoformat(datetime.now(timezone.utc))
         participant.vars['phase1_questionnaire_timing_started'] = True
 
 
@@ -68,7 +89,7 @@ def record_questionnaire_end(participant):
     if participant.vars.get('phase1_questionnaire_timing_ended'):
         return
     ended = datetime.now(timezone.utc)
-    participant.time_ended_utc = ended.isoformat()
+    participant.time_ended_utc = utc_isoformat(ended)
     started = datetime.fromisoformat(participant.time_started_utc)
     participant.seconds_survey_time = max(0.0, (ended - started).total_seconds())
     first_page = participant.vars.get('time_first_page_utc')

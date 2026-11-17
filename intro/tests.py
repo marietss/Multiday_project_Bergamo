@@ -36,6 +36,12 @@ CASES = [
 class PlayerBot(Bot):
     cases = CASES
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Explicit recruitment-ID fixture for tests only, before first GET.
+        # Production has no automatic-ID fallback.
+        self.participant.label = 'TEST-ID-' + self.case
+
     def play_round(self):
         # Unicode-safe minimum-text validation covers the requested Q3/Q4
         # boundary cases without restricting punctuation or accented letters.

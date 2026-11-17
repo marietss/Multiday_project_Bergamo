@@ -1,8 +1,11 @@
 """Server-side, single-outcome Phase-1 routing, including consent refusal."""
 import math
+from datetime import datetime, timezone
+from participant_access import has_participant_label
+from utc_timestamps import utc_isoformat
 from settings import MAXIMILES_REDIRECT_URLS
 
-SPEEDER_THRESHOLD_SECONDS = 240
+SPEEDER_THRESHOLD_SECONDS = 180
 MAX_QUESTIONNAIRE_SECONDS = 1200
 
 
@@ -16,6 +19,8 @@ def finalize_terminal_redirect(participant, config, *, attention_error, complete
     stored = participant.vars.get('phase1_terminal_redirect')
     if stored is not None:
         return stored
+    if not has_participant_label(participant):
+        return None
     seconds = participant.vars.get('seconds_survey_time')
     if consent_not_provided:
         outcome, key = 'screenout', 'screenout_redirect_url'
@@ -31,7 +36,7 @@ def finalize_terminal_redirect(participant, config, *, attention_error, complete
             raise ValueError('Invalid server-side questionnaire duration.')
         if seconds < SPEEDER_THRESHOLD_SECONDS:
             outcome, key = 'speeder', 'speeder_redirect_url'
-            reason = 'speeder_under_240'
+            reason = 'speeder_under_180'
         else:
             outcome, key = 'complete', 'complete_redirect_url'
             reason = 'completed_normally'
@@ -46,4 +51,5 @@ def finalize_terminal_redirect(participant, config, *, attention_error, complete
     # participant.terminal_status / participant.terminal_reason in wide CSV.
     participant.vars['terminal_status'] = outcome
     participant.vars['terminal_reason'] = reason
+    participant.vars['terminal_time_utc'] = utc_isoformat(datetime.now(timezone.utc))
     return result
