@@ -185,8 +185,14 @@ Quality exit preserves the elapsed `seconds_survey_time` without fabricating
 passes validation after 1200 seconds, its completion timestamps are recorded
 normally, but the outcome is Quality.
 
-End, AttentionScreenOut and consent ScreenOut render a shared fallback link and
-a single guarded automatic redirect after 1.5 seconds. Missing consent is the
+End, AttentionScreenOut and consent ScreenOut render a shared fallback link.
+Complete displays a confirmation that Phase 1 is finished and that participants
+will be contacted by email from Monday 23 November 2026 for Phase 2, with an
+automatic redirect after **7 seconds**. Other terminal outcomes retain the
+1.5-second redirect and do not promise successful completion/Phase-2 contact.
+The delay does not extend the saved survey duration or terminal event time.
+The redirect remains guarded against duplicate automatic/manual dispatch.
+Missing consent is the
 only current Maximiles Screen-out criterion. There is no quota-full condition.
 
 ### Consent Screen-out before questionnaire entry

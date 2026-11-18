@@ -618,6 +618,8 @@ class End(Page):
             attention_error=player.field_maybe_none('attention_error'), completed=True,
         )
         context['terminal_redirect_url'] = terminal['url']
+        context['terminal_complete'] = terminal['outcome'] == 'complete'
+        context['terminal_redirect_delay_ms'] = 7000 if context['terminal_complete'] else 1500
         return context
 
     @staticmethod

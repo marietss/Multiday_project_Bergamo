@@ -3,15 +3,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(require.resolve('../_static/global/terminal-redirect.js'), 'utf8');
+for (const delay of [1500, 7000]) {
 for (const first of ['automatic', 'fallback']) {
     const destinations = [];
     let timer, click;
     const url = 'https://survey.maximiles.com/static-complete?p=177137_7285c59a';
-    const link = {href: url, addEventListener: (event, callback) => { click = callback; }};
+    const link = {href: url, dataset: {redirectDelayMs: String(delay)}, addEventListener: (event, callback) => { click = callback; }};
     vm.runInNewContext(source, {
         document: {getElementById: id => id === 'terminal-redirect' ? link : null},
         window: {
-            setTimeout: callback => { timer = callback; },
+            setTimeout: (callback, milliseconds) => { assert.equal(milliseconds, delay); timer = callback; },
             location: {replace: destination => destinations.push(destination)},
         },
     });
@@ -20,6 +21,7 @@ for (const first of ['automatic', 'fallback']) {
     else { fallback(); timer(); }
     fallback(); timer();
     assert.deepEqual(destinations, [url]);
+}
 }
 vm.runInNewContext(source, {document: {getElementById: () => null}});
 console.log('Automatic/fallback ordering: exactly one redirect, no added URL parameters.');

@@ -12,6 +12,8 @@
             event.preventDefault();
             redirect();
         });
-        window.setTimeout(redirect, 1500);
+        const requestedDelay = Number(link.dataset.redirectDelayMs);
+        const delay = Number.isFinite(requestedDelay) && requestedDelay > 0 ? requestedDelay : 1500;
+        window.setTimeout(redirect, delay);
     }
 })();

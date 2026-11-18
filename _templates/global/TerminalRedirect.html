@@ -1,2 +1,2 @@
 <p>Il reindirizzamento avverrà automaticamente tra pochi secondi.</p>
-<p>Se non avviene, <a id="terminal-redirect" href="{{ terminal_redirect_url }}">clicca qui per continuare</a>.</p>
+<p>Se non avviene, <a id="terminal-redirect" href="{{ terminal_redirect_url }}" data-redirect-delay-ms="{% if is_defined('terminal_redirect_delay_ms') %}{{ terminal_redirect_delay_ms }}{% else %}1500{% endif %}">clicca qui per continuare</a>.</p>

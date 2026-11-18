@@ -78,6 +78,8 @@ class MaximilesRedirectTests(unittest.TestCase):
                 self.assertEqual(parsed_terminal.utcoffset(), timedelta(0))
                 self.assertTrue(participant.terminal_time_utc.endswith('+00:00'))
                 self.assertEqual(context['terminal_redirect_url'], MAXIMILES_REDIRECT_URLS[outcome])
+                self.assertEqual(context['terminal_complete'], outcome == 'complete')
+                self.assertEqual(context['terminal_redirect_delay_ms'], 7000 if outcome == 'complete' else 1500)
                 self.assertEqual(participant.label, 'U00012345-CaSe')
                 self.assertNotEqual(context['terminal_redirect_url'], MAXIMILES_REDIRECT_URLS['screenout'])
 
